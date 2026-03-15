@@ -1,0 +1,216 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-success: hsl(var(--success));
+
+  --font-sans: var(--app-font-sans);
+  --font-mono: var(--app-font-mono);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+}
+
+:root {
+  --background: 210 20% 98%;
+  --foreground: 215 25% 10%;
+  --border: 210 15% 88%;
+  --input: 210 15% 88%;
+  --ring: 212 100% 47%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 215 25% 10%;
+
+  --primary: 212 100% 47%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 210 15% 93%;
+  --secondary-foreground: 215 25% 30%;
+
+  --muted: 210 15% 95%;
+  --muted-foreground: 215 15% 48%;
+
+  --accent: 210 15% 93%;
+  --accent-foreground: 215 25% 20%;
+
+  --success: 137 55% 36%;
+
+  --app-font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+  --app-font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  --radius: 0.375rem;
+}
+
+.dark {
+  --background: 215 28% 9%;
+  --foreground: 210 20% 92%;
+  --border: 215 20% 18%;
+  --input: 215 20% 18%;
+  --ring: 212 100% 60%;
+
+  --card: 215 25% 11%;
+  --card-foreground: 210 20% 92%;
+
+  --primary: 212 100% 60%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 215 20% 16%;
+  --secondary-foreground: 210 15% 75%;
+
+  --muted: 215 20% 14%;
+  --muted-foreground: 215 12% 55%;
+
+  --accent: 215 20% 16%;
+  --accent-foreground: 210 20% 88%;
+
+  --success: 137 55% 46%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html,
+  body {
+    overflow-x: hidden;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+
+  .terminal-font {
+    font-family: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  }
+}
+
+@keyframes float-1 {
+
+  0%,
+  100% {
+    transform: translateY(0px) translateX(0px) scale(1);
+  }
+
+  33% {
+    transform: translateY(-18px) translateX(10px) scale(1.05);
+  }
+
+  66% {
+    transform: translateY(10px) translateX(-8px) scale(0.97);
+  }
+}
+
+@keyframes float-2 {
+
+  0%,
+  100% {
+    transform: translateY(0px) translateX(0px) scale(1);
+  }
+
+  40% {
+    transform: translateY(14px) translateX(-12px) scale(1.08);
+  }
+
+  70% {
+    transform: translateY(-10px) translateX(6px) scale(0.95);
+  }
+}
+
+@keyframes float-3 {
+
+  0%,
+  100% {
+    transform: translateY(0px) translateX(0px) scale(1);
+  }
+
+  50% {
+    transform: translateY(-20px) translateX(15px) scale(1.1);
+  }
+}
+
+.animate-float-1 {
+  animation: float-1 8s ease-in-out infinite;
+}
+
+.animate-float-2 {
+  animation: float-2 10s ease-in-out infinite;
+}
+
+.animate-float-3 {
+  animation: float-3 7s ease-in-out infinite;
+}
+
+@keyframes blink-cursor {
+
+  0%,
+  100% {
+    opacity: 0;
+  }
+
+  45%,
+  55% {
+    opacity: 1;
+  }
+}
+
+.animate-blink-cursor {
+  animation: blink-cursor 0.8s ease-in-out infinite;
+}
+
+/* GitHub-style contribution graph colors */
+.contrib-0 {
+  background-color: hsl(var(--muted));
+}
+
+.contrib-1 {
+  background-color: hsl(137 55% 80%);
+}
+
+.contrib-2 {
+  background-color: hsl(137 55% 60%);
+}
+
+.contrib-3 {
+  background-color: hsl(137 55% 46%);
+}
+
+.contrib-4 {
+  background-color: hsl(137 55% 32%);
+}
+
+.dark .contrib-0 {
+  background-color: hsl(215 20% 16%);
+}
+
+.dark .contrib-1 {
+  background-color: hsl(137 55% 20%);
+}
+
+.dark .contrib-2 {
+  background-color: hsl(137 55% 30%);
+}
+
+.dark .contrib-3 {
+  background-color: hsl(137 55% 40%);
+}
+
+.dark .contrib-4 {
+  background-color: hsl(137 55% 50%);
+}

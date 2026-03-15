@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Redirecting…</title>
+    <script>
+      // GitHub Pages SPA fallback: redirect unknown routes to index (preserves path)
+      const base = document.querySelector('base')?.href || `${window.location.origin}/`;
+      const currentPath = window.location.pathname + window.location.search + window.location.hash;
+      const redirectUrl = new URL(base);
+      redirectUrl.searchParams.set('redirect', currentPath);
+      window.location.replace(redirectUrl.toString());
+    </script>
+  </head>
+  <body>
+    Redirecting…
+  </body>
+</html>
