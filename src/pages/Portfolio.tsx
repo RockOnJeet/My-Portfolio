@@ -1047,7 +1047,7 @@ function Footer() {
           ))}
         </div>
         <p>
-          Edit <code className="font-mono bg-white/5 px-1 py-0.5 rounded">src/data/config.ts</code> to personalize
+          Made with <span className="text-[#e25555]">♥</span> by RockOnJeet! (GitHub Copilot actually)
         </p>
       </div>
     </footer>

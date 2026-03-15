@@ -162,7 +162,7 @@ export function AnonymousMessageBox() {
     <div className="rounded-xl border border-white/10 bg-[#0d1117]/80 p-6">
       <h3 className="text-xl font-semibold text-white mb-2">Feedback / Review box</h3>
       <p className="text-white/60 text-sm mb-4">
-        Submit feedback without showing the Google Forms UI. Once you submit, the button will disable and you’ll see a confirmation message.
+        Submit any feedback about the user / site. Once you submit, the button will disable and you’ll see a confirmation message.
       </p>
 
       {!isEnabled ? (
@@ -249,7 +249,7 @@ export function AnonymousMessageBox() {
       {status ? <p className="text-sm text-white/50 mt-3">{status}</p> : null}
 
       <p className="mt-4 text-xs text-white/40">
-        Tip: If your submission doesn’t appear, check the Google Forms response sheet directly.
+        Tip: If your submission doesn’t appear, contact the site owner.
       </p>
     </div>
   )

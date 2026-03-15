@@ -9,6 +9,10 @@ const port = Number(process.env.PORT ?? 5173);
 export default defineConfig({
   base: basePath,
   plugins: [react(), tailwindcss()],
+  esbuild: {
+    // Strip runtime debug artifacts from production bundles.
+    drop: ["console", "debugger"],
+  },
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "src"),
@@ -19,6 +23,7 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    sourcemap: false,
   },
   server: {
     port,

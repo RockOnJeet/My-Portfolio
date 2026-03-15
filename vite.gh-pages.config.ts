@@ -29,6 +29,10 @@ const ghPagesBase = process.env.GITHUB_REPO_NAME ?? "/";
 export default defineConfig({
   base: ghPagesBase,
   plugins: [react(), tailwindcss()],
+  esbuild: {
+    // Strip runtime debug artifacts from production bundles.
+    drop: ["console", "debugger"],
+  },
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "src"),
@@ -39,5 +43,6 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/gh-pages"),
     emptyOutDir: true,
+    sourcemap: false,
   },
 });

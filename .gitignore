@@ -3,6 +3,14 @@ node_modules/
 
 # Build outputs
 dist/
+coverage/
+
+# Build/debug artifacts
+*.map
+*.log
+*.tmp
+*.bak
+*.cache
 
 # Environment variables
 .env
