@@ -36,8 +36,8 @@ jobs:
         run: npm run build:gh-pages
         env:
           # Set to "/repo-name/" if this site lives at yourusername.github.io/repo-name/
-          # Leave unset (or "/") for a root user/org site (yourusername.github.io)
-          GITHUB_REPO_NAME: ${{ vars.GITHUB_REPO_NAME || '/' }}
+          # Leave as "/" for a root user/org site (yourusername.github.io)
+          GITHUB_REPO_NAME: ${{ vars.GITHUB_REPO_NAME || '/My-Portfolio/' }}
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
