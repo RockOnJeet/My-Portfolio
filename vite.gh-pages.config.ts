@@ -29,6 +29,7 @@ const ghPagesBase = process.env.GITHUB_REPO_NAME ?? "/";
 export default defineConfig({
   base: ghPagesBase,
   plugins: [react(), tailwindcss()],
+  assetsInclude: ["**/*.heic", "**/*.HEIC"],
   esbuild: {
     // Strip runtime debug artifacts from production bundles.
     drop: ["console", "debugger"],

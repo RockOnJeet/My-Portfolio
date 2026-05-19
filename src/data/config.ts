@@ -19,6 +19,11 @@ export const nav = {
     { label: "Contact", href: "#contact" },
   ],
 
+  /** Other nav links shown in the header dropdown */
+  others: [
+    { label: "TARDIS - A time capsule", href: "/time-capsule", external: false },
+  ],
+
   /** The primary CTA button in the nav */
   cta: { label: "Hire me", href: "#contact" },
 };
@@ -63,6 +68,7 @@ export const hero = {
     { text: "I\n{promise} I'm\nnot a bot.", weight: 25 },
     { text: "No one's\ngonna believe\nyou.", weight: 5 },
     { text: "I\n{swear} I'm\na human.", weight: 25 },
+    { text: "My prompts,\n {AI}'s code.", weight: 50 },
     { text: "I {hope}\nyou like\nrobots.", weight: 25 },
     { text: "Tell me\n{about}\nthis.", weight: 1 },
     { text: "Not\n{your} typical\nportfolio.", weight: 25 },

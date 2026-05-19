@@ -9,6 +9,7 @@ const port = Number(process.env.PORT ?? 5173);
 export default defineConfig({
   base: basePath,
   plugins: [react(), tailwindcss()],
+  assetsInclude: ["**/*.heic", "**/*.HEIC"],
   esbuild: {
     // Strip runtime debug artifacts from production bundles.
     drop: ["console", "debugger"],

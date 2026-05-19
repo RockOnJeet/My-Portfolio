@@ -1,28 +1,35 @@
-import { useState, useEffect, useMemo, useLayoutEffect, useRef, useCallback, type KeyboardEvent } from "react";
+import { useState, useEffect, useMemo, useLayoutEffect, useRef, useCallback, type CSSProperties, type KeyboardEvent } from "react";
+import { createPortal } from "react-dom";
 import { Star, ExternalLink, ChevronDown, Menu, X } from "lucide-react";
-import { FaGithub, FaInstagram, FaLinkedin } from "react-icons/fa";
+import { FaCloudflare, FaGithub, FaInstagram, FaLinkedin } from "react-icons/fa";
 import { nav, hero, about, projects, skills } from "@/data/config";
 import { decodeBase64 } from "@/lib/utils";
 import { safeExternalUrl, safeMailtoHref } from "@/lib/security";
 import { isSupportedEditorLanguage, tokenizeForEditor } from "@/lib/syntaxHighlight";
 import { AnonymousMessageBox } from "@/components/ui/AnonymousMessageBox";
+import { FullscreenNotification } from "@/components/ui/fullscreen-notification";
 import type { ThemedToken } from "shiki";
 
 const SECTION_IDS = ["about", "projects", "skills", "contact", "feedback"];
 
 /* ── Utility ─────────────────────────────────────────────── */
 function scrollTo(href: string) {
-  if (!href.startsWith("#")) return;
+  if (href.startsWith("#")) {
+    // Scroll to the anchor (for in-page navigation)
+    document.querySelector(href)?.scrollIntoView({ behavior: "smooth" });
 
-  // Scroll to the anchor (for in-page navigation)
-  document.querySelector(href)?.scrollIntoView({ behavior: "smooth" });
+    // Keep the URL in sync so sharing/copying the link preserves the target.
+    // We use replaceState to avoid polluting the history stack with each click.
+    if (typeof window !== "undefined" && window.history?.replaceState) {
+      window.history.replaceState(null, "", href);
+    } else if (typeof window !== "undefined") {
+      window.location.hash = href;
+    }
+    return;
+  }
 
-  // Keep the URL in sync so sharing/copying the link preserves the target.
-  // We use replaceState to avoid polluting the history stack with each click.
-  if (typeof window !== "undefined" && window.history?.replaceState) {
-    window.history.replaceState(null, "", href);
-  } else if (typeof window !== "undefined") {
-    window.location.hash = href;
+  if (href.startsWith("/")) {
+    window.location.href = href;
   }
 }
 
@@ -67,12 +74,66 @@ function SectionDivider() {
 function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [othersOpen, setOthersOpen] = useState(false);
+  const [dropdownStyle, setDropdownStyle] = useState<CSSProperties | null>(null);
+  const othersTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const othersPortalRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handler);
     return () => window.removeEventListener("scroll", handler);
   }, []);
+
+  useLayoutEffect(() => {
+    if (!othersOpen || !othersTriggerRef.current) {
+      setDropdownStyle(null);
+      return;
+    }
+
+    const updateStyle = () => {
+      const triggerRect = othersTriggerRef.current?.getBoundingClientRect();
+      if (!triggerRect) return;
+
+      const minWidth = 160;
+      const left = Math.min(
+        Math.max(16, triggerRect.left),
+        window.innerWidth - minWidth - 16
+      );
+
+      setDropdownStyle({
+        position: "fixed",
+        top: triggerRect.bottom + 8,
+        left,
+        minWidth,
+        zIndex: 100000,
+      });
+    };
+
+    updateStyle();
+    window.addEventListener("resize", updateStyle);
+    window.addEventListener("scroll", updateStyle, true);
+    return () => {
+      window.removeEventListener("resize", updateStyle);
+      window.removeEventListener("scroll", updateStyle, true);
+    };
+  }, [othersOpen]);
+
+  useEffect(() => {
+    const onClick = (event: MouseEvent) => {
+      if (
+        !othersTriggerRef.current?.contains(event.target as Node) &&
+        !othersPortalRef.current?.contains(event.target as Node)
+      ) {
+        setOthersOpen(false);
+      }
+    };
+
+    if (othersOpen) {
+      document.addEventListener("mousedown", onClick);
+      return () => document.removeEventListener("mousedown", onClick);
+    }
+  }, [othersOpen]);
 
   return (
     <header
@@ -118,6 +179,57 @@ function Navbar() {
               {link.label}
             </button>
           ))}
+
+          {nav.others?.length ? (
+            <div>
+              <button
+                type="button"
+                ref={othersTriggerRef}
+                onClick={() => setOthersOpen((open) => !open)}
+                className="px-3 py-1.5 text-sm text-white/70 hover:text-white transition-colors rounded-md hover:bg-white/5 cursor-pointer active:scale-95 active:brightness-90 inline-flex items-center gap-2 leading-none"
+              >
+                Others
+                <ChevronDown size={14} className={othersOpen ? "rotate-180 transition-transform" : "transition-transform"} />
+              </button>
+
+              {othersOpen && dropdownStyle
+                ? createPortal(
+                  <div
+                    ref={othersPortalRef}
+                    style={dropdownStyle}
+                    className="overflow-hidden rounded-xl border border-white/20 bg-white/10 p-1 shadow-lg shadow-white/5 backdrop-blur-xl backdrop-saturate-150"
+                  >
+                    {nav.others.map((item) =>
+                      item.external ? (
+                        <a
+                          key={item.label}
+                          href={item.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block rounded-md px-3 py-2 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors"
+                        >
+                          {item.label}
+                        </a>
+                      ) : (
+                        <button
+                          key={item.label}
+                          type="button"
+                          onClick={() => {
+                            scrollTo(item.href);
+                            setOthersOpen(false);
+                          }}
+                          className="w-full text-left rounded-md px-3 py-2 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors"
+                        >
+                          {item.label}
+                        </button>
+                      )
+                    )}
+                  </div>,
+                  document.body
+                )
+                : null}
+            </div>
+          ) : null}
         </nav>
 
         <div className="flex-1 md:flex-none" />
@@ -157,6 +269,35 @@ function Navbar() {
           >
             {nav.cta.label}
           </button>
+          {nav.others?.length ? (
+            <div className="mt-2 border-t border-white/10 pt-2">
+              <div className="px-3 text-xs uppercase tracking-[0.15em] text-white/40 pb-2">
+                Others
+              </div>
+              {nav.others.map((item) => (
+                item.external ? (
+                  <a
+                    key={item.label}
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block w-full text-left py-2 px-3 text-sm text-white/70 hover:text-white rounded-md hover:bg-white/5 transition-colors"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    {item.label}
+                  </a>
+                ) : (
+                  <button
+                    key={item.label}
+                    onClick={() => { scrollTo(item.href); setMenuOpen(false); }}
+                    className="block w-full text-left py-2 px-3 text-sm text-white/70 hover:text-white rounded-md hover:bg-white/5 transition-colors"
+                  >
+                    {item.label}
+                  </button>
+                )
+              ))}
+            </div>
+          ) : null}
         </div>
       )}
     </header>
@@ -496,7 +637,7 @@ function Hero() {
         {/* Star dots scattered around */}
         {[...Array(30)].map((_, i) => (
           <div
-            key={i}
+            key={`star-${i}`}
             className="absolute w-[2px] h-[2px] rounded-full bg-white/40"
             style={{
               top: `${10 + Math.sin(i * 137.5) * 40 + 40}%`,
@@ -525,18 +666,18 @@ function Hero() {
                   return parts.map((part, idx) => {
                     if (part.startsWith("{") && part.endsWith("}")) {
                       return (
-                        <span key={idx} className="text-white/40">
+                        <span key={`muted-${i}-${idx}`} className="text-white/40">
                           {part.slice(1, -1)}
                         </span>
                       );
                     }
-                    return <span key={idx}>{part}</span>;
+                    return <span key={`muted-${i}-${idx}`}>{part}</span>;
                   });
                 };
 
                 return (
                   <span
-                    key={i}
+                    key={`typed-${i}`}
                     className={isLastLine ? "block text-center" : "block"}
                   >
                     {isLastLine ? (
@@ -576,7 +717,7 @@ function Hero() {
               const after = line.slice(highlightEnd + 1);
 
               return (
-                <span key={i} className="block">
+                <span key={`subline-${i}`} className="block">
                   {before}
                   <span className="text-[#7dd3fc] font-semibold">
                     {highlight}
@@ -587,7 +728,7 @@ function Hero() {
             }
 
             return (
-              <span key={i} className="block">
+              <span key={`subline-${i}`} className="block">
                 {line}
               </span>
             );
@@ -729,7 +870,7 @@ function Hero() {
                 {/* Gutter (line numbers) */}
                 <div className="flex-shrink-0 w-12 pr-3 text-right text-white/20 select-none">
                   {renderedLines.map((_, i) => (
-                    <div key={i} className="leading-5">
+                    <div key={`line-${i}`} className="leading-5">
                       {i + 1}
                     </div>
                   ))}
@@ -739,7 +880,7 @@ function Hero() {
                 <div className="min-w-0 flex-1 overflow-x-auto">
                   <pre className="whitespace-pre text-[#c9d1d9]">
                     {renderedLines.map((lineTokens, i) => (
-                      <div key={i} className="leading-5">
+                      <div key={`code-line-${i}`} className="leading-5">
                         {lineTokens.length > 0 ? lineTokens.map((token, tokenIndex) => {
                           const fontStyle = token.fontStyle ?? 0;
                           const isItalic = (fontStyle & 1) !== 0;
@@ -777,9 +918,6 @@ function Hero() {
 function About() {
   const decodedEmail = decodeBase64(about.email)
   const emailHref = safeMailtoHref(decodedEmail)
-  const githubUrl = safeExternalUrl(decodeBase64(about.socials.github ?? ""))
-  const instagramUrl = safeExternalUrl(decodeBase64(about.socials.instagram ?? ""))
-  const linkedinUrl = safeExternalUrl(decodeBase64(about.socials.linkedin ?? ""))
 
   return (
     <section id="about" className="bg-[#0d1117] border-t border-white/10 py-24 px-4">
@@ -803,43 +941,6 @@ function About() {
               )}
               {about.location && (
                 <span className="text-white/40">{about.location}</span>
-              )}
-            </div>
-
-            {/* Social links */}
-            <div className="flex gap-3">
-              {githubUrl && (
-                <a
-                  href={githubUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  referrerPolicy="no-referrer"
-                  className="flex items-center gap-2 px-4 py-2 rounded-md border border-white/20 text-white/70 hover:text-white hover:border-white/40 text-sm transition-colors"
-                >
-                  <FaGithub size={16} /> GitHub
-                </a>
-              )}
-              {instagramUrl && (
-                <a
-                  href={instagramUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  referrerPolicy="no-referrer"
-                  className="flex items-center gap-2 px-4 py-2 rounded-md border border-white/20 text-white/70 hover:text-white hover:border-white/40 text-sm transition-colors"
-                >
-                  <FaInstagram size={16} /> Instagram
-                </a>
-              )}
-              {linkedinUrl && (
-                <a
-                  href={linkedinUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  referrerPolicy="no-referrer"
-                  className="flex items-center gap-2 px-4 py-2 rounded-md border border-white/20 text-white/70 hover:text-white hover:border-white/40 text-sm transition-colors"
-                >
-                  <FaLinkedin size={16} /> LinkedIn
-                </a>
               )}
             </div>
           </div>
@@ -977,6 +1078,8 @@ function Contact() {
   const decodedEmail = decodeBase64(about.email)
   const emailHref = safeMailtoHref(decodedEmail)
   const githubUrl = safeExternalUrl(decodeBase64(about.socials.github ?? ""))
+  const instagramUrl = safeExternalUrl(decodeBase64(about.socials.instagram ?? ""))
+  const linkedinUrl = safeExternalUrl(decodeBase64(about.socials.linkedin ?? ""))
 
   return (
     <section id="contact" className="bg-[#0d1117] border-t border-white/10 py-24 px-4">
@@ -1008,9 +1111,31 @@ function Contact() {
                   target="_blank"
                   rel="noopener noreferrer"
                   referrerPolicy="no-referrer"
-                  className="w-full sm:w-auto px-8 py-3 rounded-md text-base font-semibold border border-white/20 text-white hover:bg-white/10 transition-colors"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3 rounded-md text-base font-semibold border border-white/20 text-white hover:bg-white/10 transition-colors"
                 >
-                  View GitHub
+                  <FaGithub size={16} /> GitHub
+                </a>
+              )}
+              {instagramUrl && (
+                <a
+                  href={instagramUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  referrerPolicy="no-referrer"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3 rounded-md text-base font-semibold border border-white/20 text-white hover:bg-white/10 transition-colors"
+                >
+                  <FaInstagram size={16} /> Instagram
+                </a>
+              )}
+              {linkedinUrl && (
+                <a
+                  href={linkedinUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  referrerPolicy="no-referrer"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3 rounded-md text-base font-semibold border border-white/20 text-white hover:bg-white/10 transition-colors"
+                >
+                  <FaLinkedin size={16} /> LinkedIn
                 </a>
               )}
             </div>
@@ -1032,8 +1157,8 @@ function Footer() {
     <footer className="bg-[#010409] border-t border-white/10 py-10 px-4">
       <div className="max-w-[1280px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-white/30">
         <div className="flex items-center gap-2">
-          <FaGithub size={16} />
-          <span>Built with Replit · On GitHub Pages</span>
+          <FaCloudflare size={16} />
+          <span>Built with Replit · On Cloudfare Pages</span>
         </div>
         <div className="flex gap-4">
           {nav.links.map((link) => (
@@ -1056,6 +1181,8 @@ function Footer() {
 
 /* ── Root ────────────────────────────────────────────────── */
 export default function Portfolio() {
+  const [showTempNotification, setShowTempNotification] = useState(true);
+
   useEffect(() => {
     const scrollToHash = () => {
       const hash = window.location.hash;
@@ -1126,6 +1253,28 @@ export default function Portfolio() {
       <Skills />
       <Contact />
       <Footer />
+
+      <FullscreenNotification
+        open={showTempNotification}
+        onOpenChange={setShowTempNotification}
+        title={
+          <>
+            Reminiscing the
+            <br />
+            4 years of my College life!
+          </>
+        }
+        description="There's a new page added to the portfolio - click the button below to check it out :)"
+      >
+        <div className="flex justify-center">
+          <a
+            href="/time-capsule"
+            className="inline-flex w-full max-w-[260px] items-center justify-center rounded-full bg-[#1db954] px-8 py-3 text-sm font-semibold uppercase tracking-[0.12em] text-black shadow-[0_15px_40px_rgba(29,185,84,0.24)] transition-colors hover:bg-[#1ed760]"
+          >
+            Open TARDIS - A time capsule
+          </a>
+        </div>
+      </FullscreenNotification>
     </div>
   );
 }
