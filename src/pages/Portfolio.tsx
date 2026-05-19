@@ -1268,7 +1268,7 @@ export default function Portfolio() {
       >
         <div className="flex justify-center">
           <a
-            href="/time-capsule"
+            href={`${import.meta.env.BASE_URL}time-capsule`}
             className="inline-flex w-full max-w-[260px] items-center justify-center rounded-full bg-[#1db954] px-8 py-3 text-sm font-semibold uppercase tracking-[0.12em] text-black shadow-[0_15px_40px_rgba(29,185,84,0.24)] transition-colors hover:bg-[#1ed760]"
           >
             Open TARDIS - A time capsule

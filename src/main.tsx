@@ -18,12 +18,13 @@ function isSafeRedirect(uri: string) {
   }
 }
 
-const url = new URL(window.location.href);
-const redirect = url.searchParams.get("redirect");
+const redirect = new URL(window.location.href).searchParams.get("redirect");
 if (redirect && isSafeRedirect(redirect)) {
-  url.searchParams.delete("redirect");
-  window.history.replaceState({}, "", url.toString());
-  window.location.replace(redirect);
-} else {
-  createRoot(document.getElementById("root")!).render(<App />);
+  const target = new URL(redirect, window.location.origin);
+
+  // Replace the address bar with the intended SPA path, then render the app
+  // without forcing a second network navigation back to the missing route.
+  window.history.replaceState({}, "", `${target.pathname}${target.search}${target.hash}`);
 }
+
+createRoot(document.getElementById("root")!).render(<App />);
