@@ -9,7 +9,8 @@
     "build:gh-pages": "vite build --config vite.gh-pages.config.ts",
     "serve": "vite preview --config vite.config.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "generate:time-capsule-previews": "node scripts/generate-time-capsule-previews.mjs"
+    "generate:time-capsule-previews": "node scripts/generate-time-capsule-previews.mjs",
+    "resize:videos": "python scripts/resize-videos.py"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

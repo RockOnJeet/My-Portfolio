@@ -37,7 +37,7 @@ jobs:
         env:
           # Set to "/repo-name/" if this site lives at yourusername.github.io/repo-name/
           # Leave as "/" for a root user/org site (yourusername.github.io)
-          GITHUB_REPO_NAME: ${{ vars.GITHUB_REPO_NAME || '/My-Portfolio/' }}
+          GITHUB_REPO_NAME: ${{ vars.GITHUB_REPO_NAME || '/repo-name/' }}
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
