@@ -88,6 +88,19 @@ async function fetchSpotify(endpoint: string, accessToken: string) {
   });
 }
 
+async function safeParseJson(response: Response) {
+  const text = await response.text();
+  if (!text) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
 export async function getSpotifyConsolePayload(env?: EnvVars): Promise<SpotifyConsolePayload> {
   const refreshToken = await getSpotifyRefreshToken(env);
   const tokenResponse = await refreshSpotifyAccessToken(refreshToken, env);
@@ -99,11 +112,11 @@ export async function getSpotifyConsolePayload(env?: EnvVars): Promise<SpotifyCo
   ]);
 
   const playbackData = playerResponse.ok
-    ? await playerResponse.json()
+    ? (await safeParseJson(playerResponse)) ?? { error: `No playback data available` }
     : { error: `Player request failed with ${playerResponse.status}` };
 
   const queueData = queueResponse.ok
-    ? await queueResponse.json()
+    ? (await safeParseJson(queueResponse)) ?? { error: `No queue data available` }
     : { error: `Queue request failed with ${queueResponse.status}` };
 
   return {
