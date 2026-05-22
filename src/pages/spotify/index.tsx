@@ -120,6 +120,36 @@ function getSpotifyQueueItems(value: unknown): Array<Record<string, unknown>> {
   return value.queue.filter((item) => isRecord(item) && isRecord(item.track));
 }
 
+function getSpotifyTrackImage(track: unknown, preferredWidth = 320): string | null {
+  if (!isRecord(track)) return null;
+  const album = (track as Record<string, unknown>).album;
+  if (!isRecord(album) || !Array.isArray(album.images)) return null;
+
+  const images = album.images.filter(isRecord);
+  if (!images.length) return null;
+
+  let bestImage = images[0];
+  let bestDiff = Math.abs((typeof bestImage.width === "number" ? bestImage.width : preferredWidth) - preferredWidth);
+
+  for (const image of images) {
+    const width = typeof image.width === "number" ? image.width : preferredWidth;
+    const diff = Math.abs(width - preferredWidth);
+    if (diff < bestDiff) {
+      bestImage = image;
+      bestDiff = diff;
+    }
+  }
+
+  return typeof bestImage.url === "string" ? bestImage.url : null;
+}
+
+function getSpotifyAlbumName(track: unknown): string {
+  if (!isRecord(track)) return "Unknown album";
+  const album = (track as Record<string, unknown>).album;
+  if (!isRecord(album) || typeof album.name !== "string") return "Unknown album";
+  return album.name;
+}
+
 function formatTime(ms: number | null): string {
   if (ms === null || ms < 0) return "0:00";
   const totalSeconds = Math.floor(ms / 1000);
@@ -236,6 +266,8 @@ export default function Spotify() {
   const [spotifyPayload, setSpotifyPayload] = useState<SpotifyConsolePayload | null>(null);
   const [spotifyError, setSpotifyError] = useState<string | null>(null);
   const [spotifyLoading, setSpotifyLoading] = useState(true);
+  const [playbackTick, setPlaybackTick] = useState<{ progressMs: number; timestamp: number } | null>(null);
+  const [renderTick, setRenderTick] = useState(0);
 
   const { toast } = useToast();
   const spotifyErrorToastId = useRef<string | null>(null);
@@ -251,8 +283,16 @@ export default function Spotify() {
     isRecord(playbackData) && typeof playbackData.progress_ms === "number"
       ? playbackData.progress_ms
       : 0;
+
+  const isPlaying = isRecord(playbackData) && playbackData.is_playing === true;
+  const currentProgressMs = playbackDurationMs
+    ? Math.min(
+      playbackDurationMs,
+      (playbackTick?.progressMs ?? playbackProgressMs) + (isPlaying ? Date.now() - (playbackTick?.timestamp ?? Date.now()) : 0)
+    )
+    : 0;
   const playbackProgressPercent = playbackDurationMs
-    ? Math.min(100, Math.max(0, Math.round((playbackProgressMs / playbackDurationMs) * 100)))
+    ? Math.min(100, Math.max(0, Math.round((currentProgressMs / playbackDurationMs) * 100)))
     : 0;
 
   const queueItems = getSpotifyQueueItems(spotifyPayload?.queueData).map((entry) => {
@@ -264,6 +304,9 @@ export default function Spotify() {
       current: false,
     };
   });
+
+  const albumImageUrl = getSpotifyTrackImage(playbackTrack, 320);
+  const albumName = getSpotifyAlbumName(playbackTrack);
 
   const noSongPlaying =
     !spotifyLoading &&
@@ -287,6 +330,7 @@ export default function Spotify() {
 
   useEffect(() => {
     let canceled = false;
+    let intervalId: number | null = null;
 
     async function fetchSpotifyConsole() {
       try {
@@ -315,10 +359,18 @@ export default function Spotify() {
 
         setSpotifyPayload(rawResult.payload);
         setSpotifyError(null);
+
+        const playback = rawResult.payload.playbackData;
+        if (hasSpotifyPlaybackItem(playback) && isRecord(playback) && typeof playback.progress_ms === "number") {
+          setPlaybackTick({ progressMs: playback.progress_ms, timestamp: Date.now() });
+        } else {
+          setPlaybackTick(null);
+        }
       } catch (error) {
         if (canceled) return;
         setSpotifyPayload(null);
         setSpotifyError(error instanceof Error ? error.message : "Unable to load Spotify data");
+        setPlaybackTick(null);
       } finally {
         if (!canceled) {
           setSpotifyLoading(false);
@@ -327,10 +379,19 @@ export default function Spotify() {
     }
 
     fetchSpotifyConsole();
+    intervalId = window.setInterval(fetchSpotifyConsole, 1200);
 
     return () => {
       canceled = true;
+      if (intervalId !== null) {
+        window.clearInterval(intervalId);
+      }
     };
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setRenderTick((tick) => tick + 1), 250);
+    return () => window.clearInterval(timer);
   }, []);
 
   useEffect(() => {
@@ -622,6 +683,11 @@ export default function Spotify() {
               display: "grid",
               placeItems: "center",
               padding: 16,
+              backgroundImage: albumImageUrl
+                ? `linear-gradient(180deg, rgba(0,0,0,0.22), rgba(0,0,0,0.56)), url(${albumImageUrl})`
+                : undefined,
+              backgroundSize: albumImageUrl ? "cover" : undefined,
+              backgroundPosition: albumImageUrl ? "center" : undefined,
             }}
           >
             <div
@@ -686,7 +752,7 @@ export default function Spotify() {
               <div style={{ width: "100%", display: "grid", gap: 8 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, opacity: 0.85 }}>
                   <span>Now playing</span>
-                  <span>Travelling Vibes</span>
+                  <span>{albumName}</span>
                 </div>
                 <div style={{ height: 6, borderRadius: 99, background: "rgba(255,255,255,0.12)", overflow: "hidden" }}>
                   <div style={{ width: "55%", height: "100%", borderRadius: 99, background: "linear-gradient(90deg, var(--muted-100), rgba(255,255,255,0.72))" }} />
@@ -838,7 +904,7 @@ export default function Spotify() {
 
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
             <span style={{ fontSize: 11, color: "var(--muted-400)", minWidth: 28, textAlign: "right" }}>
-              {formatTime(playbackProgressMs)}
+              {formatTime(currentProgressMs)}
             </span>
             <div
               role="progressbar"
