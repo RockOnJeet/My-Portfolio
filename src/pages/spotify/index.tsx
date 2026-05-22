@@ -116,8 +116,30 @@ function getSpotifyTrackDurationMs(track: unknown): number | null {
 }
 
 function getSpotifyQueueItems(value: unknown): Array<Record<string, unknown>> {
+  if (Array.isArray(value)) {
+    return value.filter(isRecord);
+  }
+
   if (!isRecord(value) || !Array.isArray(value.queue)) return [];
-  return value.queue.filter((item) => isRecord(item) && isRecord(item.track));
+  return value.queue.filter(isRecord);
+}
+
+function getSpotifyQueueNowPlaying(value: unknown): Record<string, unknown> | null {
+  if (!isRecord(value) || !isRecord(value.currently_playing)) return null;
+  return value.currently_playing;
+}
+
+function getSpotifyActionDisallows(playbackData: unknown): Record<string, boolean> {
+  if (!isRecord(playbackData) || !isRecord(playbackData.actions) || !isRecord(playbackData.actions.disallows)) {
+    return {};
+  }
+
+  return Object.entries(playbackData.actions.disallows).reduce<Record<string, boolean>>((accumulator, [key, value]) => {
+    if (typeof value === "boolean") {
+      accumulator[key] = value;
+    }
+    return accumulator;
+  }, {});
 }
 
 function getSpotifyTrackImage(track: unknown, preferredWidth = 320): string | null {
@@ -347,9 +369,10 @@ export default function Spotify() {
   const spotifyErrorToastId = useRef<string | null>(null);
 
   const playbackData = spotifyPayload?.playbackData;
+  const queueData = spotifyPayload?.queueData;
   const playbackTrack = hasSpotifyPlaybackItem(playbackData)
     ? (playbackData as Record<string, unknown>).item
-    : null;
+    : getSpotifyQueueNowPlaying(queueData);
   const playbackTitle = getSpotifyTrackTitle(playbackTrack);
   const playbackArtist = getSpotifyTrackArtists(playbackTrack);
   const playbackDurationMs = getSpotifyTrackDurationMs(playbackTrack);
@@ -369,8 +392,16 @@ export default function Spotify() {
     ? Math.min(100, Math.max(0, Math.round((currentProgressMs / playbackDurationMs) * 100)))
     : 0;
 
-  const queueItems = getSpotifyQueueItems(spotifyPayload?.queueData).map((entry) => {
-    const track = (entry as Record<string, unknown>).track;
+  const playbackDisallows = getSpotifyActionDisallows(playbackData);
+  const likeDisabled = !playbackTrack;
+  const shuffleDisabled = playbackDisallows.shuffling === true;
+  const previousDisabled = playbackDisallows.skipping_prev === true;
+  const playDisabled = isPlaying || playbackDisallows.resuming === true;
+  const nextDisabled = playbackDisallows.skipping_next === true;
+  const repeatDisabled = playbackDisallows.toggling_repeat_context === true || playbackDisallows.toggling_repeat_track === true;
+
+  const queueItems = getSpotifyQueueItems(queueData).map((entry) => {
+    const track = isRecord(entry.track) ? entry.track : entry;
     return {
       title: getSpotifyTrackTitle(track),
       artist: getSpotifyTrackArtists(track),
@@ -760,23 +791,6 @@ export default function Spotify() {
           </div>
         </div>
 
-        <p
-          role="status"
-          aria-live="polite"
-          style={{
-            fontSize: 12,
-            margin: "0 0 24px",
-            color: spotifyError ? "var(--danger-500)" : "var(--muted-500)",
-            minHeight: 20,
-          }}
-        >
-          {spotifyLoading
-            ? "Loading Spotify data..."
-            : spotifyError
-              ? `Unable to load Spotify data: ${spotifyError}`
-              : "Spotify data loaded from backend."}
-        </p>
-
         <div
           style={{
             borderRadius: 10,
@@ -792,90 +806,35 @@ export default function Spotify() {
               "radial-gradient(circle at 30% 28%, rgba(255,255,255,0.14), transparent 22%), radial-gradient(circle at 70% 70%, rgba(0,0,0,0.24), transparent 24%), linear-gradient(135deg, var(--spotify-green) 0%, #0f8f43 42%, var(--bg-dark-900) 100%)",
           }}
         >
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              display: "grid",
-              placeItems: "center",
-              padding: 16,
-              background: trackImageDataUrl
-                ? `linear-gradient(180deg, rgba(0,0,0,0.22), rgba(0,0,0,0.56)), url(${trackImageDataUrl})`
-                : "linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))",
-              backgroundSize: trackImageDataUrl ? "cover" : "auto",
-              backgroundPosition: trackImageDataUrl ? "center" : "initial",
-            }}
-          >
+          {trackImageDataUrl ? (
+            <img
+              src={trackImageDataUrl}
+              alt={playbackTitle ? `${playbackTitle} album art` : "Spotify album art"}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                display: "block",
+              }}
+            />
+          ) : (
             <div
               style={{
                 width: "100%",
                 height: "100%",
-                borderRadius: 10,
-                border: "1px solid rgba(255,255,255,0.10)",
-                background:
-                  "linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                flexDirection: "column",
-                padding: "24px 18px",
+                display: "grid",
+                placeItems: "center",
+                background: "linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))",
                 color: "var(--muted-100)",
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                fontSize: 12,
+                fontWeight: 700,
               }}
             >
-              <div style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "start" }}>
-                <div>
-                  <div style={{ fontSize: 11, letterSpacing: "0.22em", textTransform: "uppercase", opacity: 0.85 }}>
-                    Spotify
-                  </div>
-                  <div style={{ fontSize: 13, fontWeight: 700, marginTop: 6, opacity: 0.92 }}>
-                    {playlistName}
-                  </div>
-                </div>
-                <div
-                  style={{
-                    width: 34,
-                    height: 34,
-                    borderRadius: "50%",
-                    background: "rgba(255,255,255,0.10)",
-                    display: "grid",
-                    placeItems: "center",
-                    boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.08)",
-                  }}
-                >
-                  <Music size={16} />
-                </div>
-              </div>
-
-              <div style={{ textAlign: "center", width: "100%" }}>
-                <div
-                  style={{
-                    width: "100%",
-                    maxWidth: 180,
-                    margin: "0 auto 10px",
-                    height: 2,
-                    background: "rgba(255,255,255,0.16)",
-                    borderRadius: 99,
-                  }}
-                />
-                <div style={{ fontSize: 44, fontWeight: 900, letterSpacing: "0.03em", lineHeight: 1 }}>
-                  SP
-                </div>
-                <div style={{ fontSize: 12, opacity: 0.84, marginTop: 8, letterSpacing: "0.12em", textTransform: "uppercase" }}>
-                  Queue never sleeps
-                </div>
-              </div>
-
-              <div style={{ width: "100%", display: "grid", gap: 8 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, opacity: 0.85 }}>
-                  <span>Now playing</span>
-                  <span>{albumName}</span>
-                </div>
-                <div style={{ height: 6, borderRadius: 99, background: "rgba(255,255,255,0.12)", overflow: "hidden" }}>
-                  <div style={{ width: "55%", height: "100%", borderRadius: 99, background: "linear-gradient(90deg, var(--muted-100), rgba(255,255,255,0.72))" }} />
-                </div>
-              </div>
+              No artwork
             </div>
-          </div>
+          )}
         </div>
 
         <div style={{ width: "100%", maxWidth: 340, marginBottom: 16, textAlign: "center" }}>
@@ -921,7 +880,7 @@ export default function Spotify() {
           >
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
               <button
-                disabled
+                disabled={likeDisabled}
                 title="Like (disabled)"
                 aria-label="Like"
                 style={{
@@ -932,7 +891,7 @@ export default function Spotify() {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  opacity: 0.35,
+                  opacity: likeDisabled ? 0.35 : 1,
                 }}
               >
                 <Heart
@@ -942,17 +901,35 @@ export default function Spotify() {
                   style={{ transition: `fill ${DURATION} ${EASING}, color ${DURATION} ${EASING}` }}
                 />
               </button>
-              <DisabledBtn title="Shuffle">
+              <button disabled={shuffleDisabled} title={shuffleDisabled ? "Shuffle (disabled)" : "Shuffle"} style={{
+                background: "none",
+                border: "none",
+                cursor: "not-allowed",
+                padding: 4,
+                opacity: shuffleDisabled ? 0.28 : 0.72,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}>
                 <Shuffle size={16} color="var(--muted-500)" />
-              </DisabledBtn>
-              <DisabledBtn title="Previous">
+              </button>
+              <button disabled={previousDisabled} title={previousDisabled ? "Previous (disabled)" : "Previous"} style={{
+                background: "none",
+                border: "none",
+                cursor: "not-allowed",
+                padding: 4,
+                opacity: previousDisabled ? 0.28 : 0.72,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}>
                 <SkipBack size={20} color="var(--muted-500)" />
-              </DisabledBtn>
+              </button>
             </div>
 
             <button
-              disabled
-              title="Play (disabled)"
+              disabled={playDisabled}
+              title={playDisabled ? "Play (disabled)" : "Play"}
               style={{
                 background: "rgba(255,255,255,0.10)",
                 border: "none",
@@ -963,7 +940,7 @@ export default function Spotify() {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                opacity: 0.35,
+                opacity: playDisabled ? 0.35 : 1,
                 flexShrink: 0,
               }}
             >
@@ -971,12 +948,30 @@ export default function Spotify() {
             </button>
 
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <DisabledBtn title="Next">
+              <button disabled={nextDisabled} title={nextDisabled ? "Next (disabled)" : "Next"} style={{
+                background: "none",
+                border: "none",
+                cursor: "not-allowed",
+                padding: 4,
+                opacity: nextDisabled ? 0.28 : 0.72,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}>
                 <SkipForward size={20} color="var(--muted-500)" />
-              </DisabledBtn>
-              <DisabledBtn title="Repeat">
+              </button>
+              <button disabled={repeatDisabled} title={repeatDisabled ? "Repeat (disabled)" : "Repeat"} style={{
+                background: "none",
+                border: "none",
+                cursor: "not-allowed",
+                padding: 4,
+                opacity: repeatDisabled ? 0.28 : 0.72,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}>
                 <Repeat size={16} color="var(--muted-500)" />
-              </DisabledBtn>
+              </button>
               <button
                 ref={queueBtnRef}
                 onClick={() => setQueueOpen((open) => !open)}
