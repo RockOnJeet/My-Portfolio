@@ -6,7 +6,6 @@ This document describes the current Spotify backend implementation, the intended
 
 - A dedicated backend helper exists in `src/backend/spotify/`.
 - It currently supports:
-  - decrypting `SPOTIFY_TOKEN_ENCRYPTED` with `SPOTIFY_TOKEN_KEY`
   - refreshing Spotify access tokens via `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET`
   - retrying Spotify requests on `429`, `502`, `503`, and `504`
   - fetching `/v1/me/player` and `/v1/me/player/queue`
@@ -57,7 +56,7 @@ If one of the Spotify requests fails, the endpoint still returns `success: true`
 }
 ```
 
-The endpoint must never return secret values such as `SPOTIFY_TOKEN_KEY`, `SPOTIFY_TOKEN_ENCRYPTED`, or OAuth credentials.
+The endpoint must never return secret values such as `SPOTIFY_REFRESH_TOKEN` or OAuth credentials.
 
 ## Environment variables required
 
@@ -65,8 +64,7 @@ The backend uses only these env vars:
 
 - `SPOTIFY_CLIENT_ID`
 - `SPOTIFY_CLIENT_SECRET`
-- `SPOTIFY_TOKEN_ENCRYPTED`
-- `SPOTIFY_TOKEN_KEY`
+- `SPOTIFY_REFRESH_TOKEN`
 
 These values must remain private in Cloudflare.
 

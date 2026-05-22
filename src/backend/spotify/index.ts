@@ -1,4 +1,3 @@
-import { decryptToken } from "./crypto";
 import { fetchWithRetry } from "./fetch";
 import type { SpotifyConsolePayload, SpotifyRefreshTokenResponse } from "./types";
 
@@ -10,8 +9,7 @@ type EnvVars = Record<string, string | undefined>;
 interface SpotifyConfig {
   clientId: string;
   clientSecret?: string;
-  tokenEncrypted: string;
-  tokenKey: string;
+  refreshToken: string;
 }
 
 function getEnvVariable(name: string, env: EnvVars, required = true): string {
@@ -29,8 +27,7 @@ function getSpotifyConfig(env?: EnvVars): SpotifyConfig {
   return {
     clientId: getEnvVariable("SPOTIFY_CLIENT_ID", source),
     clientSecret: source.SPOTIFY_CLIENT_SECRET,
-    tokenEncrypted: getEnvVariable("SPOTIFY_TOKEN_ENCRYPTED", source),
-    tokenKey: getEnvVariable("SPOTIFY_TOKEN_KEY", source),
+    refreshToken: getEnvVariable("SPOTIFY_REFRESH_TOKEN", source),
   };
 }
 
@@ -44,7 +41,7 @@ function encodeBase64(input: string) {
 
 export async function getSpotifyRefreshToken(env?: EnvVars) {
   const config = getSpotifyConfig(env);
-  return decryptToken(config.tokenEncrypted, config.tokenKey);
+  return config.refreshToken;
 }
 
 export async function refreshSpotifyAccessToken(refreshToken: string, env?: EnvVars) {
