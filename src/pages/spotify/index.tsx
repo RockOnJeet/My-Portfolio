@@ -94,8 +94,38 @@ function hasSpotifyPlaybackItem(value: unknown): boolean {
   return (
     isRecord(value) &&
     "item" in value &&
-    Boolean(value.item)
+    isRecord(value.item)
   );
+}
+
+function getSpotifyTrackTitle(track: unknown): string {
+  if (isRecord(track) && typeof track.name === "string") return track.name;
+  return "Unknown track";
+}
+
+function getSpotifyTrackArtists(track: unknown): string {
+  if (!isRecord(track) || !Array.isArray(track.artists)) return "Unknown artist";
+  return track.artists
+    .map((artist) => (isRecord(artist) && typeof artist.name === "string" ? artist.name : ""))
+    .filter(Boolean)
+    .join(", ") || "Unknown artist";
+}
+
+function getSpotifyTrackDurationMs(track: unknown): number | null {
+  return isRecord(track) && typeof track.duration_ms === "number" ? track.duration_ms : null;
+}
+
+function getSpotifyQueueItems(value: unknown): Array<Record<string, unknown>> {
+  if (!isRecord(value) || !Array.isArray(value.queue)) return [];
+  return value.queue.filter((item) => isRecord(item) && isRecord(item.track));
+}
+
+function formatTime(ms: number | null): string {
+  if (ms === null || ms < 0) return "0:00";
+  const totalSeconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
 function DisabledBtn({ children, title }: { children: ReactNode; title: string }) {
@@ -211,12 +241,35 @@ export default function Spotify() {
   const spotifyErrorToastId = useRef<string | null>(null);
 
   const playbackData = spotifyPayload?.playbackData;
+  const playbackTrack = hasSpotifyPlaybackItem(playbackData)
+    ? (playbackData as Record<string, unknown>).item
+    : null;
+  const playbackTitle = getSpotifyTrackTitle(playbackTrack);
+  const playbackArtist = getSpotifyTrackArtists(playbackTrack);
+  const playbackDurationMs = getSpotifyTrackDurationMs(playbackTrack);
+  const playbackProgressMs =
+    isRecord(playbackData) && typeof playbackData.progress_ms === "number"
+      ? playbackData.progress_ms
+      : 0;
+  const playbackProgressPercent = playbackDurationMs
+    ? Math.min(100, Math.max(0, Math.round((playbackProgressMs / playbackDurationMs) * 100)))
+    : 0;
+
+  const queueItems = getSpotifyQueueItems(spotifyPayload?.queueData).map((entry) => {
+    const track = (entry as Record<string, unknown>).track;
+    return {
+      title: getSpotifyTrackTitle(track),
+      artist: getSpotifyTrackArtists(track),
+      duration: formatTime(getSpotifyTrackDurationMs(track)),
+      current: false,
+    };
+  });
+
   const noSongPlaying =
     !spotifyLoading &&
     (!!spotifyError ||
       !spotifyPayload ||
-      isSpotifyErrorPayload(playbackData) ||
-      !hasSpotifyPlaybackItem(playbackData));
+      !playbackTrack);
 
   const queuePanelRef = useRef<HTMLDivElement>(null);
   const queueBtnRef = useRef<HTMLButtonElement>(null);
@@ -427,9 +480,27 @@ export default function Spotify() {
           </p>
 
           <div style={{ overflowY: "auto", flex: 1, paddingBottom: 12 }}>
-            {QUEUE_SONGS.filter((song) => song.current).map((song, index) => (
-              <QueueRow key={index} song={song} />
-            ))}
+            {playbackTrack ? (
+              <QueueRow
+                key="current"
+                song={{
+                  title: playbackTitle,
+                  artist: playbackArtist,
+                  duration: playbackDurationMs ? formatTime(playbackDurationMs) : "--:--",
+                  current: true,
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  color: "var(--muted-300)",
+                  fontSize: 12,
+                  padding: "8px 12px",
+                }}
+              >
+                No song currently playing.
+              </div>
+            )}
 
             <p
               style={{
@@ -444,9 +515,19 @@ export default function Spotify() {
               Next in queue
             </p>
 
-            {QUEUE_SONGS.filter((song) => !song.current).map((song, index) => (
-              <QueueRow key={index} song={song} />
-            ))}
+            {queueItems.length > 0 ? (
+              queueItems.map((song, index) => <QueueRow key={index} song={song} />)
+            ) : (
+              <div
+                style={{
+                  color: "var(--muted-300)",
+                  fontSize: 12,
+                  padding: "8px 12px",
+                }}
+              >
+                No upcoming songs in queue.
+              </div>
+            )}
           </div>
         </div>
       </aside>
@@ -628,7 +709,7 @@ export default function Spotify() {
               textOverflow: "ellipsis",
             }}
           >
-            {noSongPlaying ? "No song playing XoX" : "Saadi Galli Aaja"}
+            {noSongPlaying ? "No song playing XoX" : playbackTitle}
           </h1>
           {!noSongPlaying && (
             <p
@@ -641,7 +722,7 @@ export default function Spotify() {
                 textOverflow: "ellipsis",
               }}
             >
-              Ayushmann Khurrana, Neeti Mohan
+              {playbackArtist}
             </p>
           )}
         </div>
@@ -756,13 +837,15 @@ export default function Spotify() {
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-            <span style={{ fontSize: 11, color: "var(--muted-400)", minWidth: 28, textAlign: "right" }}>2:17</span>
+            <span style={{ fontSize: 11, color: "var(--muted-400)", minWidth: 28, textAlign: "right" }}>
+              {formatTime(playbackProgressMs)}
+            </span>
             <div
               role="progressbar"
               aria-label="Playback position"
               aria-valuemin={0}
               aria-valuemax={100}
-              aria-valuenow={55}
+              aria-valuenow={playbackProgressPercent}
               style={{
                 flex: 1,
                 position: "relative",
@@ -772,12 +855,20 @@ export default function Spotify() {
                 cursor: "not-allowed",
               }}
             >
-              <div style={{ height: "100%", width: "55%", borderRadius: 99, background: "var(--muted-500)" }} />
+              <div
+                style={{
+                  height: "100%",
+                  width: `${playbackProgressPercent}%`,
+                  borderRadius: 99,
+                  background: "var(--muted-500)",
+                  transition: `width ${TRANSITION}`,
+                }}
+              />
               <div
                 style={{
                   position: "absolute",
                   top: "50%",
-                  left: "calc(55% - 6px)",
+                  left: `calc(${playbackProgressPercent}% - 6px)`,
                   transform: "translateY(-50%)",
                   width: 12,
                   height: 12,
@@ -787,7 +878,9 @@ export default function Spotify() {
                 }}
               />
             </div>
-            <span style={{ fontSize: 11, color: "var(--muted-400)", minWidth: 28 }}>4:13</span>
+            <span style={{ fontSize: 11, color: "var(--muted-400)", minWidth: 28 }}>
+              {formatTime(playbackDurationMs)}
+            </span>
           </div>
 
           <div
