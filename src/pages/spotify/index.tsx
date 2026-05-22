@@ -153,15 +153,46 @@ function getSpotifyAlbumName(track: unknown): string {
 function getSpotifyContextName(playbackData: unknown): string {
   if (!isRecord(playbackData)) return "What he plays";
   const context = playbackData.context;
-  if (!isRecord(context) || typeof context.name !== "string") return "What he plays";
-  return context.name;
+  if (isRecord(context)) {
+    if (typeof context.name === "string" && context.name.trim()) {
+      return context.name;
+    }
+    const metadata = isRecord(context.metadata) ? context.metadata : undefined;
+    if (metadata && typeof metadata.name === "string" && metadata.name.trim()) {
+      return metadata.name;
+    }
+    if (metadata && typeof metadata.title === "string" && metadata.title.trim()) {
+      return metadata.title;
+    }
+    if (typeof context.uri === "string") {
+      const parts = context.uri.split(":");
+      if (parts.length > 1) {
+        const value = parts.slice(-1)[0];
+        return value.replace(/-/g, " ") || "What he plays";
+      }
+    }
+  }
+
+  const item = isRecord(playbackData.item) ? playbackData.item : null;
+  if (item && isRecord(item.album) && typeof item.album.name === "string") {
+    return item.album.name;
+  }
+
+  return "What he plays";
 }
 
 function getSpotifyDeviceName(playbackData: unknown): string {
   if (!isRecord(playbackData)) return "Unknown device";
   const device = playbackData.device;
-  if (!isRecord(device) || typeof device.name !== "string") return "Unknown device";
-  return device.name;
+  if (isRecord(device)) {
+    if (typeof device.name === "string" && device.name.trim()) {
+      return device.name;
+    }
+    if (typeof device.type === "string" && device.type.trim()) {
+      return device.type;
+    }
+  }
+  return "Unknown device";
 }
 
 function formatTime(ms: number | null): string {
@@ -282,6 +313,7 @@ export default function Spotify() {
   const [spotifyLoading, setSpotifyLoading] = useState(true);
   const [playbackTick, setPlaybackTick] = useState<{ progressMs: number; timestamp: number } | null>(null);
   const [renderTick, setRenderTick] = useState(0);
+  const [trackImageDataUrl, setTrackImageDataUrl] = useState<string | null>(null);
 
   const { toast } = useToast();
   const spotifyErrorToastId = useRef<string | null>(null);
@@ -409,6 +441,48 @@ export default function Spotify() {
     const timer = window.setInterval(() => setRenderTick((tick) => tick + 1), 250);
     return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    let canceled = false;
+    const controller = new AbortController();
+
+    async function loadTrackImage() {
+      if (!albumImageUrl) {
+        setTrackImageDataUrl(null);
+        return;
+      }
+
+      try {
+        const response = await fetch(albumImageUrl, { signal: controller.signal });
+        if (!response.ok) {
+          setTrackImageDataUrl(null);
+          return;
+        }
+
+        const blob = await response.blob();
+        if (canceled) return;
+
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          if (canceled) return;
+          if (typeof reader.result === "string") {
+            setTrackImageDataUrl(reader.result);
+          }
+        };
+        reader.readAsDataURL(blob);
+      } catch {
+        if (canceled) return;
+        setTrackImageDataUrl(null);
+      }
+    }
+
+    loadTrackImage();
+
+    return () => {
+      canceled = true;
+      controller.abort();
+    };
+  }, [albumImageUrl]);
 
   useEffect(() => {
     if (!spotifyError || spotifyErrorToastId.current) return;
@@ -699,11 +773,11 @@ export default function Spotify() {
               display: "grid",
               placeItems: "center",
               padding: 16,
-              background: albumImageUrl
-                ? `linear-gradient(180deg, rgba(0,0,0,0.22), rgba(0,0,0,0.56)), url(${albumImageUrl})`
+              background: trackImageDataUrl
+                ? `linear-gradient(180deg, rgba(0,0,0,0.22), rgba(0,0,0,0.56)), url(${trackImageDataUrl})`
                 : "linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))",
-              backgroundSize: albumImageUrl ? "cover" : "auto",
-              backgroundPosition: albumImageUrl ? "center" : "initial",
+              backgroundSize: trackImageDataUrl ? "cover" : "auto",
+              backgroundPosition: trackImageDataUrl ? "center" : "initial",
             }}
           >
             <div
