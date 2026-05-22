@@ -5,6 +5,7 @@ import {
   List,
   Music,
   Play,
+  Pause,
   Repeat,
   Shuffle,
   SkipBack,
@@ -400,6 +401,20 @@ export default function Spotify() {
   const nextDisabled = playbackDisallows.skipping_next === true;
   const repeatDisabled = playbackDisallows.toggling_repeat_context === true || playbackDisallows.toggling_repeat_track === true;
 
+  const shuffleActive = isRecord(playbackData) && (playbackData as Record<string, unknown>).shuffle_state === true;
+  const repeatState = isRecord(playbackData) && typeof (playbackData as Record<string, unknown>).repeat_state === "string" ? (playbackData as Record<string, unknown>).repeat_state as string : "off";
+  const repeatActive = repeatState !== "off";
+
+  const payloadLiked = isRecord(playbackTrack) && typeof (playbackTrack as Record<string, unknown>).liked === "boolean"
+    ? ((playbackTrack as Record<string, unknown>).liked as boolean)
+    : isRecord(playbackData) && typeof (playbackData as Record<string, unknown>).liked === "boolean"
+      ? ((playbackData as Record<string, unknown>).liked as boolean)
+      : undefined;
+
+  useEffect(() => {
+    if (typeof payloadLiked === "boolean") setLiked(payloadLiked);
+  }, [payloadLiked]);
+
   const queueItems = getSpotifyQueueItems(queueData).map((entry) => {
     const track = isRecord(entry.track) ? entry.track : entry;
     return {
@@ -598,7 +613,7 @@ export default function Spotify() {
         background:
           "radial-gradient(circle at top left, rgba(29,185,84,0.16), transparent 30%), radial-gradient(circle at 85% 15%, rgba(255,255,255,0.06), transparent 18%), linear-gradient(135deg, var(--bg-dark-900) 0%, var(--bg-dark-800) 45%, var(--bg-dark-700) 100%)",
         fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
-        minHeight: "100vh",
+        height: "100vh",
         width: "100%",
         display: "flex",
         flexDirection: isMobile ? "column" : "row",
@@ -626,7 +641,7 @@ export default function Spotify() {
             }
             : {
               width: queueOpen ? `${queueW}px` : "0px",
-              minHeight: "100vh",
+              height: "100vh",
               transition: `width ${TRANSITION}`,
               borderLeft: queueOpen ? "1px solid rgba(255,255,255,0.08)" : "none",
             }),
@@ -748,7 +763,8 @@ export default function Spotify() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          minHeight: "100vh",
+          height: "100vh",
+          overflow: "hidden",
           padding: "32px 24px",
           transition: `flex ${TRANSITION}`,
           boxSizing: "border-box",
@@ -881,12 +897,12 @@ export default function Spotify() {
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
               <button
                 disabled={likeDisabled}
-                title="Like (disabled)"
+                title={likeDisabled ? "Like (disabled)" : liked ? "Unlike" : "Like"}
                 aria-label="Like"
                 style={{
                   background: "none",
                   border: "none",
-                  cursor: "not-allowed",
+                  cursor: likeDisabled ? "not-allowed" : "pointer",
                   padding: 4,
                   display: "flex",
                   alignItems: "center",
@@ -896,22 +912,22 @@ export default function Spotify() {
               >
                 <Heart
                   size={20}
-                  fill="none"
-                  color="var(--muted-400)"
+                  fill={liked ? "var(--spotify-green)" : "none"}
+                  color={liked ? "var(--spotify-green)" : "var(--muted-400)"}
                   style={{ transition: `fill ${DURATION} ${EASING}, color ${DURATION} ${EASING}` }}
                 />
               </button>
               <button disabled={shuffleDisabled} title={shuffleDisabled ? "Shuffle (disabled)" : "Shuffle"} style={{
                 background: "none",
                 border: "none",
-                cursor: "not-allowed",
+                cursor: shuffleDisabled ? "not-allowed" : "pointer",
                 padding: 4,
                 opacity: shuffleDisabled ? 0.28 : 0.72,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
               }}>
-                <Shuffle size={16} color="var(--muted-500)" />
+                <Shuffle size={16} color={shuffleActive ? "var(--spotify-green)" : "var(--muted-500)"} />
               </button>
               <button disabled={previousDisabled} title={previousDisabled ? "Previous (disabled)" : "Previous"} style={{
                 background: "none",
@@ -929,11 +945,11 @@ export default function Spotify() {
 
             <button
               disabled={playDisabled}
-              title={playDisabled ? "Play (disabled)" : "Play"}
+              title={playDisabled ? "Play (disabled)" : isPlaying ? "Pause" : "Play"}
               style={{
                 background: "rgba(255,255,255,0.10)",
                 border: "none",
-                cursor: "not-allowed",
+                cursor: playDisabled ? "not-allowed" : "pointer",
                 width: 44,
                 height: 44,
                 borderRadius: "50%",
@@ -944,14 +960,18 @@ export default function Spotify() {
                 flexShrink: 0,
               }}
             >
-              <Play size={20} fill="var(--muted-100)" color="var(--muted-100)" style={{ marginLeft: 2 }} />
+              {isPlaying ? (
+                <Pause size={20} color="var(--muted-100)" />
+              ) : (
+                <Play size={20} fill="var(--muted-100)" color="var(--muted-100)" style={{ marginLeft: 2 }} />
+              )}
             </button>
 
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
               <button disabled={nextDisabled} title={nextDisabled ? "Next (disabled)" : "Next"} style={{
                 background: "none",
                 border: "none",
-                cursor: "not-allowed",
+                cursor: nextDisabled ? "not-allowed" : "pointer",
                 padding: 4,
                 opacity: nextDisabled ? 0.28 : 0.72,
                 display: "flex",
@@ -963,14 +983,14 @@ export default function Spotify() {
               <button disabled={repeatDisabled} title={repeatDisabled ? "Repeat (disabled)" : "Repeat"} style={{
                 background: "none",
                 border: "none",
-                cursor: "not-allowed",
+                cursor: repeatDisabled ? "not-allowed" : "pointer",
                 padding: 4,
                 opacity: repeatDisabled ? 0.28 : 0.72,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
               }}>
-                <Repeat size={16} color="var(--muted-500)" />
+                <Repeat size={16} color={repeatActive ? "var(--spotify-green)" : "var(--muted-500)"} />
               </button>
               <button
                 ref={queueBtnRef}
