@@ -16,8 +16,10 @@ function base64Encode(bytes: Uint8Array) {
 }
 
 function base64Decode(value: string) {
+  const normalized = normalizeBase64(value);
+
   if (typeof atob === "function") {
-    const binary = atob(value);
+    const binary = atob(normalized);
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i += 1) {
       bytes[i] = binary.charCodeAt(i);
@@ -25,7 +27,26 @@ function base64Decode(value: string) {
     return bytes;
   }
 
-  return new Uint8Array(Buffer.from(value, "base64"));
+  return new Uint8Array(Buffer.from(normalized, "base64"));
+}
+
+function normalizeBase64(value: string) {
+  const trimmed = value.trim();
+  const withoutQuotes =
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+      (trimmed.startsWith("'") && trimmed.endsWith("'"))
+      ? trimmed.slice(1, -1)
+      : trimmed;
+
+  const compact = withoutQuotes.replace(/\s+/g, "");
+  const standardBase64 = compact.replace(/-/g, "+").replace(/_/g, "/");
+  const remainder = standardBase64.length % 4;
+
+  if (remainder === 0) {
+    return standardBase64;
+  }
+
+  return `${standardBase64}${"=".repeat(4 - remainder)}`;
 }
 
 async function getWebCrypto() {
