@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Portfolio from "@/pages/Portfolio";
 import TimeCapsule from "@/pages/time-capsule";
-import NotFound from "@/pages/not-found";
+import Spotify from "@/pages/spotify";
 
 function App() {
   return (
@@ -12,6 +12,7 @@ function App() {
         <Switch>
           <Route path="/" component={Portfolio} />
           <Route path="/time-capsule" component={TimeCapsule} />
+          <Route path="/spotify" component={Spotify} />
         </Switch>
       </WouterRouter>
     </TooltipProvider>

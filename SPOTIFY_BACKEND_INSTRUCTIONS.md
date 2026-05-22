@@ -20,6 +20,45 @@ This document describes the current Spotify backend implementation, the intended
 - Each request does a fresh token decryption, refresh, and API fetch.
 - This is fine for a simple snapshot endpoint, but it is not optimized for change detection or low-bandwidth push delivery.
 
+## `/api/spotify/console` endpoint format
+
+The endpoint is a simple GET snapshot API. It returns JSON in one of two shapes:
+
+Success:
+
+```json
+{
+  "success": true,
+  "payload": {
+    "playbackData": { /* Spotify /me/player response or error info */ },
+    "queueData": { /* Spotify /me/player/queue response or error info */ }
+  }
+}
+```
+
+Failure:
+
+```json
+{
+  "success": false,
+  "error": "Some descriptive error message"
+}
+```
+
+If one of the Spotify requests fails, the endpoint still returns `success: true` and embeds the failure in the matching payload field, for example:
+
+```json
+{
+  "success": true,
+  "payload": {
+    "playbackData": { "error": "Player request failed with 403" },
+    "queueData": { /* potentially valid queue payload */ }
+  }
+}
+```
+
+The endpoint must never return secret values such as `SPOTIFY_TOKEN_KEY`, `SPOTIFY_TOKEN_ENCRYPTED`, or OAuth credentials.
+
 ## Environment variables required
 
 The backend uses only these env vars:
