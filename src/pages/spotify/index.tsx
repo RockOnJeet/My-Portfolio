@@ -167,8 +167,36 @@ function getSpotifyContextName(playbackData: unknown): string {
     if (typeof context.uri === "string") {
       const parts = context.uri.split(":");
       if (parts.length > 1) {
-        const value = parts.slice(-1)[0];
-        return value.replace(/-/g, " ") || "What he plays";
+        let value = parts.slice(-1)[0];
+        try {
+          if (/%/.test(value)) {
+            value = decodeURIComponent(value);
+          }
+        } catch {
+          // ignore decode errors
+        }
+        // If this looks like a spotify id (22 alnum chars), skip and try external url below
+        if (!/^[A-Za-z0-9]{22}$/.test(value)) {
+          return value.replace(/-/g, " ") || "What he plays";
+        }
+      }
+    }
+
+    if (isRecord(context.external_urls) && typeof context.external_urls.spotify === "string") {
+      try {
+        const u = new URL(context.external_urls.spotify);
+        const parts = u.pathname.split("/").filter(Boolean);
+        if (parts.length) {
+          let last = parts.slice(-1)[0];
+          try {
+            if (/%/.test(last)) last = decodeURIComponent(last);
+          } catch { }
+          if (!/^[A-Za-z0-9]{22}$/.test(last)) {
+            return last.replace(/-/g, " ") || "What he plays";
+          }
+        }
+      } catch {
+        // ignore
       }
     }
   }
@@ -453,23 +481,21 @@ export default function Spotify() {
       }
 
       try {
-        const response = await fetch(albumImageUrl, { signal: controller.signal });
+        // Use backend proxy to avoid CSP connect-src blocking on Spotify CDN
+        const proxyUrl = `/api/spotify/artwork?url=${encodeURIComponent(albumImageUrl)}`;
+        const response = await fetch(proxyUrl, { signal: controller.signal });
         if (!response.ok) {
           setTrackImageDataUrl(null);
           return;
         }
 
-        const blob = await response.blob();
+        const json = await response.json();
         if (canceled) return;
-
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          if (canceled) return;
-          if (typeof reader.result === "string") {
-            setTrackImageDataUrl(reader.result);
-          }
-        };
-        reader.readAsDataURL(blob);
+        if (json && json.success === true && typeof json.dataUrl === "string") {
+          setTrackImageDataUrl(json.dataUrl);
+        } else {
+          setTrackImageDataUrl(null);
+        }
       } catch {
         if (canceled) return;
         setTrackImageDataUrl(null);
