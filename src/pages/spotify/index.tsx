@@ -150,6 +150,20 @@ function getSpotifyAlbumName(track: unknown): string {
   return album.name;
 }
 
+function getSpotifyContextName(playbackData: unknown): string {
+  if (!isRecord(playbackData)) return "What he plays";
+  const context = playbackData.context;
+  if (!isRecord(context) || typeof context.name !== "string") return "What he plays";
+  return context.name;
+}
+
+function getSpotifyDeviceName(playbackData: unknown): string {
+  if (!isRecord(playbackData)) return "Unknown device";
+  const device = playbackData.device;
+  if (!isRecord(device) || typeof device.name !== "string") return "Unknown device";
+  return device.name;
+}
+
 function formatTime(ms: number | null): string {
   if (ms === null || ms < 0) return "0:00";
   const totalSeconds = Math.floor(ms / 1000);
@@ -307,6 +321,8 @@ export default function Spotify() {
 
   const albumImageUrl = getSpotifyTrackImage(playbackTrack, 320);
   const albumName = getSpotifyAlbumName(playbackTrack);
+  const playlistName = getSpotifyContextName(playbackData);
+  const deviceName = getSpotifyDeviceName(playbackData);
 
   const noSongPlaying =
     !spotifyLoading &&
@@ -638,8 +654,8 @@ export default function Spotify() {
             >
               Playing from playlist
             </p>
-            <p style={{ fontSize: 11, color: "var(--muted-500)", fontWeight: 700, margin: 0 }}>
-              What he plays
+            <p style={{ fontSize: 11, color: "var(--muted-500)", fontWeight: 700, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {playlistName}
             </p>
           </div>
         </div>
@@ -683,11 +699,11 @@ export default function Spotify() {
               display: "grid",
               placeItems: "center",
               padding: 16,
-              backgroundImage: albumImageUrl
+              background: albumImageUrl
                 ? `linear-gradient(180deg, rgba(0,0,0,0.22), rgba(0,0,0,0.56)), url(${albumImageUrl})`
-                : undefined,
-              backgroundSize: albumImageUrl ? "cover" : undefined,
-              backgroundPosition: albumImageUrl ? "center" : undefined,
+                : "linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))",
+              backgroundSize: albumImageUrl ? "cover" : "auto",
+              backgroundPosition: albumImageUrl ? "center" : "initial",
             }}
           >
             <div
@@ -712,7 +728,7 @@ export default function Spotify() {
                     Spotify
                   </div>
                   <div style={{ fontSize: 13, fontWeight: 700, marginTop: 6, opacity: 0.92 }}>
-                    What he plays
+                    {playlistName}
                   </div>
                 </div>
                 <div
@@ -964,7 +980,7 @@ export default function Spotify() {
           >
             <Smartphone size={13} color="var(--muted-500)" />
             <span style={{ fontSize: 11, color: "var(--muted-500)", fontWeight: 600 }}>Listening on&nbsp;</span>
-            <span style={{ fontSize: 11, color: "var(--muted-100)", fontWeight: 700 }}>Desktop</span>
+            <span style={{ fontSize: 11, color: "var(--muted-100)", fontWeight: 700 }}>{deviceName}</span>
           </div>
         </div>
       </main>
