@@ -17,6 +17,10 @@ coverage/
 .env.local
 .env.*.local
 
+# Local spotify token utility artifacts
+scripts/spotify-token.encrypted
+scripts/spotify-token.*
+
 # Vite cache
 .vite/
 
