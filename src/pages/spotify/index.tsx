@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Heart,
   List,
   Music,
   Play,
   Pause,
+  Palette,
   Repeat,
   Shuffle,
   SkipBack,
@@ -34,6 +34,7 @@ const QUEUE_PANEL_ID = "spotify-queue-panel";
 const QUEUE_HEADING_ID = "spotify-queue-heading";
 
 type Song = (typeof QUEUE_SONGS)[number];
+type QueueItem = Song & { imageUrl: string | null };
 
 interface SpotifyConsolePayload {
   playbackData: unknown;
@@ -166,6 +167,28 @@ function getSpotifyTrackImage(track: unknown, preferredWidth = 320): string | nu
   return typeof bestImage.url === "string" ? bestImage.url : null;
 }
 
+function getSpotifySmallestTrackImage(track: unknown): string | null {
+  if (!isRecord(track)) return null;
+  const album = (track as Record<string, unknown>).album;
+  if (!isRecord(album) || !Array.isArray(album.images)) return null;
+
+  const images = album.images.filter(isRecord);
+  if (!images.length) return null;
+
+  let smallestImage = images[0];
+  let smallestWidth = typeof smallestImage.width === "number" ? smallestImage.width : Number.POSITIVE_INFINITY;
+
+  for (const image of images) {
+    const width = typeof image.width === "number" ? image.width : Number.POSITIVE_INFINITY;
+    if (width < smallestWidth) {
+      smallestImage = image;
+      smallestWidth = width;
+    }
+  }
+
+  return typeof smallestImage.url === "string" ? smallestImage.url : null;
+}
+
 function getSpotifyAlbumName(track: unknown): string {
   if (!isRecord(track)) return "Unknown album";
   const album = (track as Record<string, unknown>).album;
@@ -275,7 +298,7 @@ function DisabledBtn({ children, title }: { children: ReactNode; title: string }
   );
 }
 
-function QueueRow({ song }: { song: Song }) {
+function QueueRow({ song, imageDataUrl }: { song: Song; imageDataUrl: string | null }) {
   return (
     <div
       role="listitem"
@@ -304,7 +327,13 @@ function QueueRow({ song }: { song: Song }) {
           boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.08)",
         }}
       >
-        {song.current ? (
+        {imageDataUrl ? (
+          <img
+            src={imageDataUrl}
+            alt="Queue artwork"
+            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+          />
+        ) : song.current ? (
           <div
             style={{
               width: "100%",
@@ -357,14 +386,17 @@ function QueueRow({ song }: { song: Song }) {
 
 export default function Spotify() {
   const [queueOpen, setQueueOpen] = useState(false);
-  const [liked, setLiked] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [spotifyPayload, setSpotifyPayload] = useState<SpotifyConsolePayload | null>(null);
   const [spotifyError, setSpotifyError] = useState<string | null>(null);
   const [spotifyLoading, setSpotifyLoading] = useState(true);
   const [playbackTick, setPlaybackTick] = useState<{ progressMs: number; timestamp: number } | null>(null);
+  const [lastKnownPlaybackTrack, setLastKnownPlaybackTrack] = useState<Record<string, unknown> | null>(null);
+  const [lastKnownPlaybackTick, setLastKnownPlaybackTick] = useState<{ progressMs: number; timestamp: number } | null>(null);
   const [renderTick, setRenderTick] = useState(0);
   const [trackImageDataUrl, setTrackImageDataUrl] = useState<string | null>(null);
+  const artworkCacheRef = useRef<Map<string, string | null>>(new Map());
+  const artworkPendingRef = useRef<Set<string>>(new Set());
 
   const { toast } = useToast();
   const spotifyErrorToastId = useRef<string | null>(null);
@@ -374,19 +406,21 @@ export default function Spotify() {
   const playbackTrack = hasSpotifyPlaybackItem(playbackData)
     ? (playbackData as Record<string, unknown>).item
     : getSpotifyQueueNowPlaying(queueData);
-  const playbackTitle = getSpotifyTrackTitle(playbackTrack);
-  const playbackArtist = getSpotifyTrackArtists(playbackTrack);
-  const playbackDurationMs = getSpotifyTrackDurationMs(playbackTrack);
+  const displayPlaybackTrack = playbackTrack ?? lastKnownPlaybackTrack;
+  const playbackTitle = getSpotifyTrackTitle(displayPlaybackTrack);
+  const playbackArtist = getSpotifyTrackArtists(displayPlaybackTrack);
+  const playbackDurationMs = getSpotifyTrackDurationMs(displayPlaybackTrack);
   const playbackProgressMs =
     isRecord(playbackData) && typeof playbackData.progress_ms === "number"
       ? playbackData.progress_ms
       : 0;
+  const activePlaybackTick = playbackTick ?? lastKnownPlaybackTick;
 
   const isPlaying = isRecord(playbackData) && playbackData.is_playing === true;
   const currentProgressMs = playbackDurationMs
     ? Math.min(
       playbackDurationMs,
-      (playbackTick?.progressMs ?? playbackProgressMs) + (isPlaying ? Date.now() - (playbackTick?.timestamp ?? Date.now()) : 0)
+      (activePlaybackTick?.progressMs ?? playbackProgressMs) + (isPlaying ? Date.now() - (activePlaybackTick?.timestamp ?? Date.now()) : 0)
     )
     : 0;
   const playbackProgressPercent = playbackDurationMs
@@ -394,7 +428,6 @@ export default function Spotify() {
     : 0;
 
   const playbackDisallows = getSpotifyActionDisallows(playbackData);
-  const likeDisabled = !playbackTrack;
   const shuffleDisabled = playbackDisallows.shuffling === true;
   const previousDisabled = playbackDisallows.skipping_prev === true;
   const playDisabled = isPlaying || playbackDisallows.resuming === true;
@@ -405,19 +438,10 @@ export default function Spotify() {
   const repeatState = isRecord(playbackData) && typeof (playbackData as Record<string, unknown>).repeat_state === "string" ? (playbackData as Record<string, unknown>).repeat_state as string : "off";
   const repeatActive = repeatState !== "off";
 
-  const payloadLiked = isRecord(playbackTrack) && typeof (playbackTrack as Record<string, unknown>).liked === "boolean"
-    ? ((playbackTrack as Record<string, unknown>).liked as boolean)
-    : isRecord(playbackData) && typeof (playbackData as Record<string, unknown>).liked === "boolean"
-      ? ((playbackData as Record<string, unknown>).liked as boolean)
-      : undefined;
-
-  useEffect(() => {
-    if (typeof payloadLiked === "boolean") setLiked(payloadLiked);
-  }, [payloadLiked]);
-
-  const queueItems = getSpotifyQueueItems(queueData).map((entry) => {
+  const queueItems = getSpotifyQueueItems(queueData).map((entry): QueueItem => {
     const track = isRecord(entry.track) ? entry.track : entry;
     return {
+      imageUrl: getSpotifySmallestTrackImage(track),
       title: getSpotifyTrackTitle(track),
       artist: getSpotifyTrackArtists(track),
       duration: formatTime(getSpotifyTrackDurationMs(track)),
@@ -425,16 +449,14 @@ export default function Spotify() {
     };
   });
 
-  const albumImageUrl = getSpotifyTrackImage(playbackTrack, 320);
-  const albumName = getSpotifyAlbumName(playbackTrack);
+  const albumImageUrl = getSpotifyTrackImage(displayPlaybackTrack, 320);
+  const albumName = getSpotifyAlbumName(displayPlaybackTrack);
   const playlistName = getSpotifyContextName(playbackData);
   const deviceName = getSpotifyDeviceName(playbackData);
 
   const noSongPlaying =
     !spotifyLoading &&
-    (!!spotifyError ||
-      !spotifyPayload ||
-      !playbackTrack);
+    !displayPlaybackTrack;
 
   const queuePanelRef = useRef<HTMLDivElement>(null);
   const queueBtnRef = useRef<HTMLButtonElement>(null);
@@ -484,9 +506,15 @@ export default function Spotify() {
 
         const playback = rawResult.payload.playbackData;
         if (hasSpotifyPlaybackItem(playback) && isRecord(playback) && typeof playback.progress_ms === "number") {
-          setPlaybackTick({ progressMs: playback.progress_ms, timestamp: Date.now() });
+          const nextTick = { progressMs: playback.progress_ms, timestamp: Date.now() };
+          setPlaybackTick(nextTick);
+          setLastKnownPlaybackTick(nextTick);
         } else {
           setPlaybackTick(null);
+        }
+
+        if (hasSpotifyPlaybackItem(playback) && isRecord((playback as Record<string, unknown>).item)) {
+          setLastKnownPlaybackTrack((playback as Record<string, unknown>).item as Record<string, unknown>);
         }
       } catch (error) {
         if (canceled) return;
@@ -512,6 +540,18 @@ export default function Spotify() {
   }, []);
 
   useEffect(() => {
+    if (isRecord(playbackTrack)) {
+      setLastKnownPlaybackTrack(playbackTrack);
+    }
+  }, [playbackTrack]);
+
+  useEffect(() => {
+    if (playbackTick) {
+      setLastKnownPlaybackTick(playbackTick);
+    }
+  }, [playbackTick]);
+
+  useEffect(() => {
     const timer = window.setInterval(() => setRenderTick((tick) => tick + 1), 250);
     return () => window.clearInterval(timer);
   }, []);
@@ -526,11 +566,24 @@ export default function Spotify() {
         return;
       }
 
+      const cached = artworkCacheRef.current.get(albumImageUrl);
+      if (cached !== undefined) {
+        setTrackImageDataUrl(cached);
+        return;
+      }
+
+      if (artworkPendingRef.current.has(albumImageUrl)) {
+        return;
+      }
+
+      artworkPendingRef.current.add(albumImageUrl);
+
       try {
         // Use backend proxy to avoid CSP connect-src blocking on Spotify CDN
         const proxyUrl = `/api/spotify/artwork?url=${encodeURIComponent(albumImageUrl)}`;
         const response = await fetch(proxyUrl, { signal: controller.signal });
         if (!response.ok) {
+          artworkCacheRef.current.set(albumImageUrl, null);
           setTrackImageDataUrl(null);
           return;
         }
@@ -538,13 +591,18 @@ export default function Spotify() {
         const json = await response.json();
         if (canceled) return;
         if (json && json.success === true && typeof json.dataUrl === "string") {
+          artworkCacheRef.current.set(albumImageUrl, json.dataUrl);
           setTrackImageDataUrl(json.dataUrl);
         } else {
+          artworkCacheRef.current.set(albumImageUrl, null);
           setTrackImageDataUrl(null);
         }
       } catch {
         if (canceled) return;
+        artworkCacheRef.current.set(albumImageUrl, null);
         setTrackImageDataUrl(null);
+      } finally {
+        artworkPendingRef.current.delete(albumImageUrl);
       }
     }
 
@@ -555,6 +613,50 @@ export default function Spotify() {
       controller.abort();
     };
   }, [albumImageUrl]);
+
+  useEffect(() => {
+    const urlsToPrefetch = [albumImageUrl, ...queueItems.map((item) => item.imageUrl)].filter(
+      (url): url is string => Boolean(url)
+    );
+
+    if (!urlsToPrefetch.length) return;
+
+    let canceled = false;
+
+    async function prefetchArtwork(url: string) {
+      if (artworkCacheRef.current.has(url)) return;
+      if (artworkPendingRef.current.has(url)) return;
+
+      artworkPendingRef.current.add(url);
+
+      try {
+        const response = await fetch(`/api/spotify/artwork?url=${encodeURIComponent(url)}`);
+        if (!response.ok) {
+          artworkCacheRef.current.set(url, null);
+          return;
+        }
+
+        const json = await response.json();
+        if (canceled) return;
+        if (json && json.success === true && typeof json.dataUrl === "string") {
+          artworkCacheRef.current.set(url, json.dataUrl);
+        } else {
+          artworkCacheRef.current.set(url, null);
+        }
+      } catch {
+        if (canceled) return;
+        artworkCacheRef.current.set(url, null);
+      } finally {
+        artworkPendingRef.current.delete(url);
+      }
+    }
+
+    void Promise.all(urlsToPrefetch.map((url) => prefetchArtwork(url)));
+
+    return () => {
+      canceled = true;
+    };
+  }, [albumImageUrl, queueItems]);
 
   useEffect(() => {
     if (!spotifyError || spotifyErrorToastId.current) return;
@@ -712,6 +814,7 @@ export default function Spotify() {
                   duration: playbackDurationMs ? formatTime(playbackDurationMs) : "--:--",
                   current: true,
                 }}
+                imageDataUrl={trackImageDataUrl}
               />
             ) : (
               <div
@@ -739,7 +842,13 @@ export default function Spotify() {
             </p>
 
             {queueItems.length > 0 ? (
-              queueItems.map((song, index) => <QueueRow key={index} song={song} />)
+              queueItems.map((song, index) => (
+                <QueueRow
+                  key={index}
+                  song={song}
+                  imageDataUrl={song.imageUrl ? artworkCacheRef.current.get(song.imageUrl) ?? null : null}
+                />
+              ))
             ) : (
               <div
                 style={{
@@ -896,45 +1005,40 @@ export default function Spotify() {
           >
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
               <button
-                disabled={likeDisabled}
-                title={likeDisabled ? "Like (disabled)" : liked ? "Unlike" : "Like"}
-                aria-label="Like"
+                disabled
+                title="Theme (coming soon)"
+                aria-label="Theme"
                 style={{
                   background: "none",
                   border: "none",
-                  cursor: likeDisabled ? "not-allowed" : "pointer",
+                  cursor: "not-allowed",
                   padding: 4,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  opacity: likeDisabled ? 0.35 : 1,
+                  opacity: 0.35,
                 }}
               >
-                <Heart
-                  size={20}
-                  fill={liked ? "var(--spotify-green)" : "none"}
-                  color={liked ? "var(--spotify-green)" : "var(--muted-400)"}
-                  style={{ transition: `fill ${DURATION} ${EASING}, color ${DURATION} ${EASING}` }}
-                />
+                <Palette size={20} color="var(--muted-400)" />
               </button>
-              <button disabled={shuffleDisabled} title={shuffleDisabled ? "Shuffle (disabled)" : "Shuffle"} style={{
+              <button disabled title={shuffleDisabled ? "Shuffle (disabled)" : "Shuffle"} style={{
                 background: "none",
                 border: "none",
-                cursor: shuffleDisabled ? "not-allowed" : "pointer",
+                cursor: "not-allowed",
                 padding: 4,
-                opacity: shuffleDisabled ? 0.28 : 0.72,
+                opacity: 0.28,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
               }}>
                 <Shuffle size={16} color={shuffleActive ? "var(--spotify-green)" : "var(--muted-500)"} />
               </button>
-              <button disabled={previousDisabled} title={previousDisabled ? "Previous (disabled)" : "Previous"} style={{
+              <button disabled title={previousDisabled ? "Previous (disabled)" : "Previous"} style={{
                 background: "none",
                 border: "none",
                 cursor: "not-allowed",
                 padding: 4,
-                opacity: previousDisabled ? 0.28 : 0.72,
+                opacity: 0.28,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -944,19 +1048,19 @@ export default function Spotify() {
             </div>
 
             <button
-              disabled={playDisabled}
+              disabled
               title={playDisabled ? "Play (disabled)" : isPlaying ? "Pause" : "Play"}
               style={{
                 background: "rgba(255,255,255,0.10)",
                 border: "none",
-                cursor: playDisabled ? "not-allowed" : "pointer",
+                cursor: "not-allowed",
                 width: 44,
                 height: 44,
                 borderRadius: "50%",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                opacity: playDisabled ? 0.35 : 1,
+                opacity: 0.35,
                 flexShrink: 0,
               }}
             >
@@ -968,24 +1072,24 @@ export default function Spotify() {
             </button>
 
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <button disabled={nextDisabled} title={nextDisabled ? "Next (disabled)" : "Next"} style={{
+              <button disabled title={nextDisabled ? "Next (disabled)" : "Next"} style={{
                 background: "none",
                 border: "none",
-                cursor: nextDisabled ? "not-allowed" : "pointer",
+                cursor: "not-allowed",
                 padding: 4,
-                opacity: nextDisabled ? 0.28 : 0.72,
+                opacity: 0.28,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
               }}>
                 <SkipForward size={20} color="var(--muted-500)" />
               </button>
-              <button disabled={repeatDisabled} title={repeatDisabled ? "Repeat (disabled)" : "Repeat"} style={{
+              <button disabled title={repeatDisabled ? "Repeat (disabled)" : "Repeat"} style={{
                 background: "none",
                 border: "none",
-                cursor: repeatDisabled ? "not-allowed" : "pointer",
+                cursor: "not-allowed",
                 padding: 4,
-                opacity: repeatDisabled ? 0.28 : 0.72,
+                opacity: 0.28,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
