@@ -14,8 +14,7 @@ function App() {
           <Route path="/time-capsule" component={TimeCapsule} />
           <Route path="/spotify" component={Spotify} />
         </Switch>
-      </WouterRouter>
-    </TooltipProvider>
+      </WouterRouter>      <Toaster />    </TooltipProvider>
   );
 }
 

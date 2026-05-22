@@ -55,6 +55,21 @@
   --app-font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
   --app-font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
   --radius: 0.375rem;
+
+  /* centralized palette (use these in components to align pages) */
+  --spotify-green: #1db954;
+  --muted-100: #c9d1d9;
+  --muted-300: #9ca3af;
+  --muted-400: #6b7280;
+  --muted-500: #374151;
+  --bg-dark-900: #010409;
+  --bg-dark-800: #0d1117;
+  --bg-dark-700: #161b22;
+  --accent-purple: #6e40c9;
+  --accent-blue: #1f6feb;
+  --success-500: #238636;
+  --warning-500: #d97706;
+  --danger-500: #b91c1c;
 }
 
 .dark {
@@ -80,7 +95,92 @@
   --accent-foreground: 210 20% 88%;
 
   --success: 137 55% 46%;
+
+  /* dark-mode palette fallbacks */
+  --spotify-green: #1db954;
+  --muted-100: #c9d1d9;
+  --muted-300: #9ca3af;
+  --muted-400: #9ca3af;
+  --muted-500: #6b7280;
+  --bg-dark-900: #010409;
+  --bg-dark-800: #0d1117;
+  --bg-dark-700: #161b22;
+  --accent-purple: #6e40c9;
+  --accent-blue: #1f6feb;
+  --success-500: #238636;
+  --warning-500: #d97706;
+  --danger-500: #b91c1c;
 }
+
+/* Helper utility classes to prefer variables over literals */
+.bg-spotify {
+  background: var(--spotify-green);
+}
+
+.text-spotify {
+  color: var(--spotify-green);
+}
+
+.text-muted-100 {
+  color: var(--muted-100);
+}
+
+.text-muted-300 {
+  color: var(--muted-300);
+}
+
+.text-muted-400 {
+  color: var(--muted-400);
+}
+
+.text-muted-500 {
+  color: var(--muted-500);
+}
+
+.bg-dark-900 {
+  background: var(--bg-dark-900);
+}
+
+.bg-dark-800 {
+  background: var(--bg-dark-800);
+}
+
+.bg-dark-700 {
+  background: var(--bg-dark-700);
+}
+
+.bg-accent-purple {
+  background: var(--accent-purple);
+}
+
+.text-accent-purple {
+  color: var(--accent-purple);
+}
+
+.bg-accent-blue {
+  background: var(--accent-blue);
+}
+
+.text-accent-blue {
+  color: var(--accent-blue);
+}
+
+.text-success-500 {
+  color: var(--success-500);
+}
+
+.bg-success-500 {
+  background: var(--success-500);
+}
+
+.text-warning-500 {
+  color: var(--warning-500);
+}
+
+.text-danger-500 {
+  color: var(--danger-500);
+}
+
 
 @layer base {
   * {

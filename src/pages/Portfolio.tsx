@@ -140,7 +140,7 @@ function Navbar() {
       className={[
         "fixed top-0 left-0 right-0 z-50 transition-all duration-200",
         scrolled
-          ? "bg-[#010409]/95 backdrop-blur border-b border-white/10"
+          ? "bg-dark-900 backdrop-blur border-b border-white/10"
           : "bg-transparent",
       ].join(" ")}
     >
@@ -237,7 +237,7 @@ function Navbar() {
         {/* CTA button */}
         <button
           onClick={() => scrollTo(nav.cta.href)}
-          className="hidden md:inline-flex items-center px-4 py-1.5 rounded-md text-sm font-medium bg-white text-[#0d1117] cursor-pointer shadow-sm transition-all hover:shadow-[0_0_15px_0_rgba(255,255,255,0.35)] active:scale-95 active:shadow-[0_0_12px_0_rgba(255,255,255,0.25)]"
+          className="hidden md:inline-flex items-center px-4 py-1.5 rounded-md text-sm font-medium bg-card text-muted-500 cursor-pointer shadow-sm transition-all hover:shadow-[0_0_15px_0_rgba(255,255,255,0.35)] active:scale-95 active:shadow-[0_0_12px_0_rgba(255,255,255,0.25)]"
         >
           {nav.cta.label}
         </button>
@@ -253,7 +253,7 @@ function Navbar() {
 
       {/* Mobile menu */}
       {menuOpen && (
-        <div className="md:hidden bg-[#0d1117] border-t border-white/10 px-4 pb-4 space-y-1">
+        <div className="md:hidden bg-dark-800 border-t border-white/10 px-4 pb-4 space-y-1">
           {nav.links.map((link) => (
             <button
               key={link.label}
@@ -620,15 +620,15 @@ function Hero() {
   }, [activeEditorTab, activeCode, editorExpanded]);
 
   return (
-    <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-[#0d1117] pt-16">
+    <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-dark-800 pt-16">
       {/* Glow background */}
       <div className="absolute inset-0 pointer-events-none">
         {/* Central purple glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[600px] rounded-full bg-[#6e40c9]/20 blur-[120px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[600px] rounded-full blur-[120px]" style={{ background: "var(--accent-purple)", opacity: 0.2 }} />
         {/* Left blue glow */}
-        <div className="absolute top-1/3 left-1/4 w-[400px] h-[400px] rounded-full bg-[#1f6feb]/15 blur-[100px]" />
+        <div className="absolute top-1/3 left-1/4 w-[400px] h-[400px] rounded-full blur-[100px]" style={{ background: "var(--accent-blue)", opacity: 0.15 }} />
         {/* Right glow */}
-        <div className="absolute bottom-1/3 right-1/4 w-[350px] h-[350px] rounded-full bg-[#388bfd]/10 blur-[100px]" />
+        <div className="absolute bottom-1/3 right-1/4 w-[350px] h-[350px] rounded-full blur-[100px]" style={{ background: "var(--accent-blue)", opacity: 0.1 }} />
         {/* Floating blobs — white teardrop shapes like GitHub's homepage */}
         <div className="absolute top-[28%] left-[20%] w-14 h-14 rounded-full bg-white/80 blur-sm animate-float-1" />
         <div className="absolute top-[40%] right-[22%] w-20 h-20 rounded-full bg-white/70 blur-sm animate-float-2" />
@@ -719,7 +719,7 @@ function Hero() {
               return (
                 <span key={`subline-${i}`} className="block">
                   {before}
-                  <span className="text-[#7dd3fc] font-semibold">
+                  <span className="text-accent-blue font-semibold">
                     {highlight}
                   </span>
                   {after}
@@ -739,7 +739,8 @@ function Hero() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <button
             onClick={() => scrollTo(hero.primaryCta.href)}
-            className="w-full sm:w-auto px-6 py-3 rounded-md text-base font-semibold bg-[#238636] hover:bg-[#2ea043] text-white transition-colors cursor-pointer"
+            className="w-full sm:w-auto px-6 py-3 rounded-md text-base font-semibold text-white transition-colors cursor-pointer"
+            style={{ background: "var(--success-500)" }}
           >
             {hero.primaryCta.label}
           </button>
@@ -767,8 +768,8 @@ function Hero() {
           {/* VS Code–style chrome (window controls + tabs) */}
           <div
             className={
-              "bg-[#1e1e1e] px-4 py-2.5 flex items-center gap-2 border-b border-[#303030] select-none " +
-              (editorExpanded ? "" : "cursor-pointer")
+              "px-4 py-2.5 flex items-center gap-2 border-b border-white/10 select-none " +
+              (editorExpanded ? "bg-dark-700" : "bg-dark-700 cursor-pointer")
             }
             onDoubleClick={(event) => {
               // Prevent double-click from selecting tab text
@@ -781,18 +782,18 @@ function Hero() {
                 type="button"
                 onClick={collapseEditor}
                 aria-label="Collapse editor"
-                className="w-3 h-3 rounded-full bg-[#ff5f57] focus:outline-none focus:ring-2 focus:ring-white/50"
+                className="w-3 h-3 rounded-full bg-danger-500 focus:outline-none focus:ring-2 focus:ring-white/50"
               />
               <button
                 type="button"
                 aria-label={editorExpanded ? "Collapse editor" : "Expand editor"}
                 onClick={toggleEditor}
-                className="w-3 h-3 rounded-full bg-[#febc2e] focus:outline-none focus:ring-2 focus:ring-white/50"
+                className="w-3 h-3 rounded-full bg-warning-500 focus:outline-none focus:ring-2 focus:ring-white/50"
               />
               <button
                 type="button"
                 aria-label="Green control (no-op)"
-                className="w-3 h-3 rounded-full bg-[#28c840] focus:outline-none focus:ring-2 focus:ring-white/50"
+                className="w-3 h-3 rounded-full bg-success-500 focus:outline-none focus:ring-2 focus:ring-white/50"
               />
             </div>
 
@@ -802,16 +803,17 @@ function Hero() {
               </div>
             ) : (
               <div
-                className="relative flex flex-1 items-center gap-1 ml-2 text-xs bg-[#252526] rounded-t-md px-2 py-1"
+                className="relative flex flex-1 items-center gap-1 ml-2 text-xs rounded-t-md px-2 py-1 bg-dark-700"
                 role="tablist"
                 aria-label="Editor tabs"
                 onKeyDown={handleTabListKeyDown}
               >
                 <div
-                  className="absolute left-0 bottom-0 h-0.5 bg-[#0d7aca] transition-all duration-200 ease-out"
+                  className="absolute left-0 bottom-0 h-0.5 transition-all duration-200 ease-out"
                   style={{
                     width: `${underlineStyle.width}px`,
                     transform: `translateX(${underlineStyle.left}px)`,
+                    background: 'var(--accent-blue)'
                   }}
                 />
                 {editorTabs.map((tab, idx) => (
@@ -859,14 +861,14 @@ function Hero() {
               id={`editor-panel-${activeEditorTab}`}
               role="tabpanel"
               aria-labelledby={`editor-tab-${activeEditorTab}`}
-              className="bg-[#1b1b1b] px-6 py-5 font-mono text-sm text-left overflow-x-auto overflow-y-auto max-h-full"
+              className="px-6 py-5 font-mono text-sm text-left overflow-x-auto overflow-y-auto max-h-full bg-dark-700"
             >
               {highlightError && (
                 <div className="mb-3 text-xs text-amber-400/90">
                   Syntax highlighting unavailable: {highlightError}
                 </div>
               )}
-              <div className="flex text-[#c9d1d9]">
+              <div className="flex text-muted-100">
                 {/* Gutter (line numbers) */}
                 <div className="flex-shrink-0 w-12 pr-3 text-right text-white/20 select-none">
                   {renderedLines.map((_, i) => (
@@ -878,7 +880,7 @@ function Hero() {
 
                 {/* Code (horizontal scroll only) */}
                 <div className="min-w-0 flex-1 overflow-x-auto">
-                  <pre className="whitespace-pre text-[#c9d1d9]">
+                  <pre className="whitespace-pre text-muted-100">
                     {renderedLines.map((lineTokens, i) => (
                       <div key={`code-line-${i}`} className="leading-5">
                         {lineTokens.length > 0 ? lineTokens.map((token, tokenIndex) => {
@@ -891,7 +893,7 @@ function Hero() {
                             <span
                               key={`${i}-${tokenIndex}`}
                               style={{
-                                color: token.color ?? "#c9d1d9",
+                                color: token.color ?? "var(--muted-100)",
                                 fontStyle: isItalic ? "italic" : "normal",
                                 fontWeight: isBold ? 700 : 400,
                                 textDecoration: isUnderline ? "underline" : "none",
@@ -920,11 +922,11 @@ function About() {
   const emailHref = safeMailtoHref(decodedEmail)
 
   return (
-    <section id="about" className="bg-[#0d1117] border-t border-white/10 py-24 px-4">
+    <section id="about" className="bg-dark-800 border-t border-white/10 py-24 px-4">
       <div className="max-w-[1280px] mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           <div>
-            <p className="text-[#238636] font-mono text-sm mb-3">// about me</p>
+            <p className="text-success-500 font-mono text-sm mb-3">// about me</p>
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
               Engineering intelligent embedded systems and robotics
             </h2>
@@ -934,7 +936,7 @@ function About() {
               {about.email && emailHref && (
                 <a
                   href={emailHref}
-                  className="text-[#388bfd] hover:underline"
+                  className="text-accent-blue hover:underline"
                 >
                   {decodedEmail}
                 </a>
@@ -949,7 +951,7 @@ function About() {
           <div className="grid grid-cols-2 gap-4">
             {about.stats.map((stat) => (
               <div key={stat.label}
-                className="rounded-xl border border-white/10 bg-[#161b22] p-6 text-center">
+                className="rounded-xl border border-white/10 bg-dark-700 p-6 text-center">
                 <div className="text-4xl font-bold text-white mb-1">{stat.value}</div>
                 <div className="text-sm text-white/50">{stat.label}</div>
               </div>
@@ -964,9 +966,9 @@ function About() {
 /* ── Projects Section ────────────────────────────────────── */
 function Projects() {
   return (
-    <section id="projects" className="bg-[#0d1117] border-t border-white/10 py-24 px-4">
+    <section id="projects" className="bg-dark-800 border-t border-white/10 py-24 px-4">
       <div className="max-w-[1280px] mx-auto">
-        <p className="text-[#238636] font-mono text-sm mb-3">// projects</p>
+        <p className="text-success-500 font-mono text-sm mb-3">// projects</p>
         <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
           Things I've built
         </h2>
@@ -978,7 +980,7 @@ function Projects() {
           {projects.map((project) => (
             <div
               key={project.name}
-              className="group flex flex-col rounded-xl border border-white/10 bg-[#161b22] p-6 hover:border-[#388bfd]/50 transition-all duration-200 hover:bg-[#161b22]/80"
+              className="group flex flex-col rounded-xl border border-white/10 bg-dark-700 p-6 transition-all duration-200 hover:border-white/20 hover:bg-dark-700"
             >
               {(() => {
                 const projectUrl = safeExternalUrl(project.url)
@@ -993,7 +995,7 @@ function Projects() {
                           target="_blank"
                           rel="noopener noreferrer"
                           referrerPolicy="no-referrer"
-                          className="font-semibold text-[#388bfd] hover:underline"
+                          className="font-semibold text-accent-blue hover:underline"
                         >
                           {project.name}
                         </a>
@@ -1042,9 +1044,9 @@ function Projects() {
 /* ── Skills Section ──────────────────────────────────────── */
 function Skills() {
   return (
-    <section id="skills" className="bg-[#161b22] border-t border-white/10 py-24 px-4">
+    <section id="skills" className="bg-dark-700 border-t border-white/10 py-24 px-4">
       <div className="max-w-[1280px] mx-auto">
-        <p className="text-[#238636] font-mono text-sm mb-3">// skills</p>
+        <p className="text-success-500 font-mono text-sm mb-3">// skills</p>
         <h2 className="text-3xl md:text-4xl font-bold text-white mb-12">
           My actual stack
         </h2>
@@ -1052,7 +1054,7 @@ function Skills() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {skills.map((group) => (
             <div key={group.category}
-              className="rounded-xl border border-white/10 bg-[#0d1117] p-6 space-y-3">
+              className="rounded-xl border border-white/10 bg-dark-800 p-6 space-y-3">
               <h3 className="text-sm font-semibold text-white/60 uppercase tracking-wider">
                 {group.category}
               </h3>
@@ -1060,7 +1062,7 @@ function Skills() {
                 {group.items.map((item) => (
                   <li key={item}
                     className="flex items-center gap-2 text-sm text-white/80">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#238636]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-success-500" />
                     {item}
                   </li>
                 ))}
@@ -1082,13 +1084,13 @@ function Contact() {
   const linkedinUrl = safeExternalUrl(decodeBase64(about.socials.linkedin ?? ""))
 
   return (
-    <section id="contact" className="bg-[#0d1117] border-t border-white/10 py-24 px-4">
+    <section id="contact" className="bg-dark-800 border-t border-white/10 py-24 px-4">
       <div className="max-w-[1280px] mx-auto text-center">
         {/* Glow behind the contact section */}
         <div className="relative inline-block">
-          <div className="absolute inset-0 -m-8 rounded-full bg-[#6e40c9]/20 blur-[80px]" />
+          <div className="absolute inset-0 -m-8 rounded-full blur-[80px]" style={{ background: "var(--accent-purple)", opacity: 0.2 }} />
           <div className="relative">
-            <p className="text-[#238636] font-mono text-sm mb-3">// contact</p>
+            <p className="text-success-500 font-mono text-sm mb-3">// contact</p>
             <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">
               Let's build something together.
             </h2>
@@ -1100,7 +1102,8 @@ function Contact() {
               {emailHref && (
                 <a
                   href={emailHref}
-                  className="w-full sm:w-auto px-8 py-3 rounded-md text-base font-semibold bg-[#238636] hover:bg-[#2ea043] text-white transition-colors"
+                  className="w-full sm:w-auto px-8 py-3 rounded-md text-base font-semibold text-white transition-colors"
+                  style={{ background: "var(--success-500)" }}
                 >
                   Email me
                 </a>
@@ -1154,7 +1157,7 @@ function Contact() {
 /* ── Footer ──────────────────────────────────────────────── */
 function Footer() {
   return (
-    <footer className="bg-[#010409] border-t border-white/10 py-10 px-4">
+    <footer className="bg-dark-900 border-t border-white/10 py-10 px-4">
       <div className="max-w-[1280px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-white/30">
         <div className="flex items-center gap-2">
           <FaCloudflare size={16} />
@@ -1172,7 +1175,7 @@ function Footer() {
           ))}
         </div>
         <p>
-          Made with <span className="text-[#e25555]">♥</span> by RockOnJeet! (GitHub Copilot actually)
+          Made with <span className="text-danger-500">♥</span> by RockOnJeet! (GitHub Copilot actually)
         </p>
       </div>
     </footer>
@@ -1243,7 +1246,7 @@ export default function Portfolio() {
   }, []);
 
   return (
-    <div className="min-h-screen" style={{ background: "#0d1117" }}>
+    <div className="min-h-screen" style={{ background: "var(--bg-dark-800)" }}>
       <Navbar />
       <Hero />
       <About />
@@ -1269,7 +1272,8 @@ export default function Portfolio() {
         <div className="flex justify-center">
           <a
             href={`${import.meta.env.BASE_URL}time-capsule`}
-            className="inline-flex w-full max-w-[260px] items-center justify-center rounded-full bg-[#1db954] px-8 py-3 text-sm font-semibold uppercase tracking-[0.12em] text-black shadow-[0_15px_40px_rgba(29,185,84,0.24)] transition-colors hover:bg-[#1ed760]"
+            className="inline-flex w-full max-w-[260px] items-center justify-center rounded-full bg-spotify px-8 py-3 text-sm font-semibold uppercase tracking-[0.12em] text-black shadow-[0_15px_40px_rgba(29,185,84,0.24)] transition-colors"
+            style={{ background: 'var(--spotify-green)' }}
           >
             Open TARDIS - A time capsule
           </a>

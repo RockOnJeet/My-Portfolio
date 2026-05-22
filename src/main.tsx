@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
+import { initTheme } from "./lib/theme";
 
 // GitHub Pages SPA fallback support: if a 404 redirected here with a `redirect=` query, navigate there.
 // Only allow internal redirects (same origin + relative path).
@@ -19,6 +20,8 @@ function isSafeRedirect(uri: string) {
 }
 
 const redirect = new URL(window.location.href).searchParams.get("redirect");
+// Initialize theme early to avoid FOUC and expose a simple API for extensions
+initTheme();
 if (redirect && isSafeRedirect(redirect)) {
   const target = new URL(redirect, window.location.origin);
 
