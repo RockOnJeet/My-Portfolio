@@ -1,5 +1,6 @@
 import * as React from "react"
 import { feedbackForm } from "@/data/config"
+import { sanitizeUserText } from "@/lib/security"
 
 const MAX_WORDS = 120
 const MAX_MESSAGE_CHARS = 1200
@@ -19,17 +20,11 @@ const countWords = (text: string) => {
 }
 
 const normalizeNameInput = (value: string) => {
-  return value
-    .replace(/[\r\n\u0000-\u001F\u007F]/g, "")
-    .replace(/\s+/g, " ")
-    .slice(0, MAX_NAME_CHARS)
+  return sanitizeUserText(value, { allowNewlines: false, maxLen: MAX_NAME_CHARS })
 }
 
 const normalizeMessageInput = (value: string) => {
-  return value
-    .replace(/\r\n?/g, "\n")
-    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
-    .slice(0, MAX_MESSAGE_CHARS)
+  return sanitizeUserText(value, { allowNewlines: true, maxLen: MAX_MESSAGE_CHARS })
 }
 
 const normalizeHoneypotInput = (value: string) => {
