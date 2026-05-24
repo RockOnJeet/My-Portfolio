@@ -18,7 +18,8 @@
     "forceConsistentCasingInFileNames": true,
     "jsx": "react-jsx",
     "types": [
-      "vite/client"
+      "vite/client",
+      "node"
     ],
     "paths": {
       "@/*": [
@@ -27,7 +28,8 @@
     }
   },
   "include": [
-    "src"
+    "src",
+    "functions"
   ],
   "exclude": [
     "node_modules",

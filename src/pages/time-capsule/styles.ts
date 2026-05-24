@@ -3,11 +3,11 @@ export const STYLES = `
   .font-inter { font-family: 'Inter', sans-serif; }
   .font-fraunces { font-family: 'Fraunces', serif; }
 
-  .bg-void { background-color: #0a0c0f; }
-  .text-glow { color: #a3e635; text-shadow: 0 0 10px rgba(163, 230, 53, 0.3); }
-  .border-glow { border-color: #a3e635; box-shadow: 0 0 10px rgba(163, 230, 53, 0.1); }
-  .text-amber-glow { color: #d97706; text-shadow: 0 0 10px rgba(217, 119, 6, 0.3); }
-  .text-blue-glow { color: #3b82f6; text-shadow: 0 0 10px rgba(59, 130, 246, 0.3); }
+  .bg-void { background-color: var(--bg-dark-800); }
+  .text-glow { color: var(--spotify-green); text-shadow: 0 0 10px rgba(29,185,84,0.28); }
+  .border-glow { border-color: var(--spotify-green); box-shadow: 0 0 10px rgba(29,185,84,0.12); }
+  .text-amber-glow { color: var(--warning-500); text-shadow: 0 0 10px rgba(217, 119, 6, 0.28); }
+  .text-blue-glow { color: var(--accent-blue); text-shadow: 0 0 10px rgba(59, 130, 246, 0.3); }
 
   .scanlines {
     position: fixed;
@@ -192,7 +192,7 @@ export const STYLES = `
     position: relative;
     width: 100%;
     aspect-ratio: 4 / 3;
-    background: linear-gradient(180deg, #161f13 0%, #0b1208 45%, #050a05 100%);
+    background: linear-gradient(180deg, var(--bg-dark-700) 0%, var(--bg-dark-800) 45%, var(--bg-dark-900) 100%);
     box-shadow: 0 28px 72px rgba(0, 0, 0, 0.38);
     overflow: hidden;
   }
@@ -375,7 +375,7 @@ export const STYLES = `
   .zone-photo-placeholder {
     width: 100%;
     height: 100%;
-    background: linear-gradient(180deg, #2f3d29 0%, #111509 100%);
+    background: linear-gradient(180deg, var(--bg-dark-700) 0%, var(--bg-dark-800) 100%);
   }
 
   .glass-card:hover {
@@ -385,26 +385,26 @@ export const STYLES = `
   }
 
   .index-card {
-    background: #0d1a0d;
-    border: 1px solid rgba(163, 230, 53, 0.18);
-    border-top: 5px solid rgba(163, 230, 53, 0.55);
+    background: var(--bg-dark-800);
+    border: 1px solid rgba(29,185,84,0.18);
+    border-top: 5px solid rgba(29,185,84,0.55);
     box-shadow:
-      0 2px 0 rgba(163,230,53,0.04),
+      0 2px 0 rgba(29,185,84,0.04),
       0 8px 24px rgba(0,0,0,0.55),
       0 20px 48px rgba(0,0,0,0.35),
-      inset 0 1px 0 rgba(163,230,53,0.06);
+      inset 0 1px 0 rgba(29,185,84,0.06);
     transition: transform 0.45s cubic-bezier(0.16,1,0.3,1),
                 box-shadow 0.45s ease,
                 border-top-color 0.3s ease;
   }
   .index-card:hover {
     box-shadow:
-      0 2px 0 rgba(163,230,53,0.08),
+      0 2px 0 rgba(29,185,84,0.08),
       0 12px 40px rgba(0,0,0,0.65),
       0 28px 60px rgba(0,0,0,0.4),
-      0 0 30px rgba(163,230,53,0.05),
-      inset 0 1px 0 rgba(163,230,53,0.1);
-    border-top-color: rgba(163, 230, 53, 0.85);
+      0 0 30px rgba(29,185,84,0.05),
+      inset 0 1px 0 rgba(29,185,84,0.1);
+    border-top-color: rgba(29,185,84,0.85);
   }
 
   .stamp {

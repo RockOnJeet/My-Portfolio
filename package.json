@@ -10,7 +10,11 @@
     "serve": "vite preview --config vite.config.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "generate:time-capsule-previews": "node scripts/generate-time-capsule-previews.mjs",
-    "resize:videos": "python scripts/resize-videos.py"
+    "resize:videos": "python scripts/resize-videos.py",
+    "spotify:auth-url": "node scripts/spotify-token-utils.mjs auth-url",
+    "spotify:exchange-token": "node scripts/spotify-token-utils.mjs exchange",
+    "spotify:encrypt-token": "node scripts/spotify-token-utils.mjs encrypt",
+    "spotify:decrypt-token": "node scripts/spotify-token-utils.mjs decrypt"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

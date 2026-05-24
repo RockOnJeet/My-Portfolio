@@ -6,6 +6,7 @@ import {
   ToastProvider,
   ToastTitle,
   ToastViewport,
+  ToastProgress,
 } from "@/components/ui/toast"
 
 export function Toaster() {
@@ -24,6 +25,7 @@ export function Toaster() {
             </div>
             {action}
             <ToastClose />
+            <ToastProgress duration={props.duration ?? 5000} />
           </Toast>
         )
       })}

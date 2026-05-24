@@ -108,3 +108,48 @@ export function safeMailtoHref(rawEmail: string): string | null {
 
   return `mailto:${email}`
 }
+
+/**
+ * Sanitize free-form user input for safe storage/display:
+ * - strips HTML tags
+ * - removes control characters (optionally allowing newlines)
+ * - collapses excessive whitespace
+ * - enforces an optional max length
+ */
+export function sanitizeUserText(
+  raw: string,
+  options?: { allowNewlines?: boolean; maxLen?: number }
+): string {
+  const allowNewlines = options?.allowNewlines ?? false;
+  const maxLen = options?.maxLen ?? Infinity;
+
+  let s = raw.replace(/\u0000/g, "");
+
+  // Remove HTML tags (basic) to avoid accidental HTML injection
+  s = s.replace(/<[^>]*>/g, "");
+
+  // Remove control chars except optional newlines
+  if (allowNewlines) {
+    s = s.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]+/g, "");
+  } else {
+    s = s.replace(/[\x00-\x1F\x7F]+/g, " ");
+  }
+
+  // Normalize line endings and collapse multiple whitespace characters
+  if (allowNewlines) {
+    s = s.replace(/\r\n?/g, "\n");
+    s = s.replace(/[ \t\f\v]+/g, " ");
+    // collapse multiple newlines to max two
+    s = s.replace(/\n{3,}/g, "\n\n");
+  } else {
+    s = s.replace(/\s+/g, " ");
+  }
+
+  s = s.trim();
+
+  if (s.length > maxLen) {
+    s = s.slice(0, maxLen);
+  }
+
+  return s;
+}

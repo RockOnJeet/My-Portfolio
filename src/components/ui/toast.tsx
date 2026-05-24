@@ -86,6 +86,26 @@ const ToastClose = React.forwardRef<
 ))
 ToastClose.displayName = ToastPrimitives.Close.displayName
 
+function ToastProgress({ duration = 5000 }: { duration?: number }) {
+  const [active, setActive] = React.useState(false)
+
+  React.useEffect(() => {
+    requestAnimationFrame(() => setActive(true))
+  }, [])
+
+  return (
+    <div className="absolute bottom-0 left-0 right-0 h-1 bg-muted/30">
+      <div
+        className="h-full bg-primary"
+        style={{
+          width: active ? "0%" : "100%",
+          transition: `width ${duration}ms linear`,
+        }}
+      />
+    </div>
+  )
+}
+
 const ToastTitle = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Title>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Title>
@@ -123,5 +143,6 @@ export {
   ToastTitle,
   ToastDescription,
   ToastClose,
+  ToastProgress,
   ToastAction,
 }

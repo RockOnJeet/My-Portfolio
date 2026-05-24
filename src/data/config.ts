@@ -22,6 +22,7 @@ export const nav = {
   /** Other nav links shown in the header dropdown */
   others: [
     { label: "TARDIS - A time capsule", href: "/time-capsule", external: false },
+    { label: "Spotify - What he plays", href: "/spotify", external: false },
   ],
 
   /** The primary CTA button in the nav */
