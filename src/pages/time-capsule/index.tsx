@@ -183,7 +183,7 @@ export default function TimeCapsule() {
         <Zone name="INIT_SEQUENCE" className="rounded-[28px] p-8 hero-zone" onPhotoClick={handlePhotoClick}>
           <Section className="items-start">
             <div className="mt-[-10vh]">
-              <div className="font-jb text-glow text-sm sm:text-base md:text-lg mb-8 inline-flex items-center overflow-hidden">
+              <div className="hero-command relative font-jb text-glow text-sm sm:text-base md:text-lg mb-8 inline-flex items-center overflow-hidden">
                 <span className="animate-typing">
                   $ init career.sh --student=soumyajit --years=4
                 </span>
@@ -703,8 +703,8 @@ export default function TimeCapsule() {
             <Carousel className="relative" opts={{ align: "start", containScroll: "trimSnaps", loop: true }}>
               <CarouselContent className="h-full">
                 {[selectedStack.leader, ...selectedStack.members].map((photo) => (
-                  <CarouselItem key={photo.id} className="min-w-full flex-column content-center px-2">
-                    <div className="fullscreen-photo-card mx-auto w-full max-w-[900px] animate-pickup">
+                  <CarouselItem key={photo.id} className="min-w-full flex-column content-center">
+                    <div className="fullscreen-photo-card z-0 mx-auto w-full max-w-[900px] animate-pickup">
                       <div className="fullscreen-photo-frame">
                         {photo.fullSrc ? (
                           <img

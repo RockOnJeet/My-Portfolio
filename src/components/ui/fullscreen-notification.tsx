@@ -57,28 +57,75 @@ const FullscreenNotification = React.forwardRef<
       }
     }, [currentOpen])
 
+    const historyEntryRef = React.useRef(false)
+    const skipHistoryBackRef = React.useRef(false)
+
+    const isFullscreenHistoryState = React.useCallback((state: unknown) => {
+      return typeof state === "object" && state !== null && "fullscreenNotification" in state
+    }, [])
+
     const handleOpenChange = React.useCallback(
       (nextOpen: boolean) => {
+        if (
+          nextOpen === false &&
+          currentOpen &&
+          !skipHistoryBackRef.current &&
+          historyEntryRef.current &&
+          isFullscreenHistoryState(window.history.state)
+        ) {
+          window.history.back()
+          return
+        }
+
+        if (skipHistoryBackRef.current) {
+          skipHistoryBackRef.current = false
+        }
+
         if (open === undefined) {
           setInternalOpen(nextOpen)
         }
         onOpenChange?.(nextOpen)
       },
-      [open, onOpenChange]
+      [open, onOpenChange, currentOpen, isFullscreenHistoryState]
     )
+
+    React.useEffect(() => {
+      if (!currentOpen) return
+
+      const hasHistoryState = isFullscreenHistoryState(window.history.state)
+      if (!hasHistoryState) {
+        window.history.pushState(
+          { ...(window.history.state as Record<string, unknown>), fullscreenNotification: true },
+          ""
+        )
+      }
+      historyEntryRef.current = true
+    }, [currentOpen, isFullscreenHistoryState])
+
+    React.useEffect(() => {
+      const handlePopstate = (event: PopStateEvent) => {
+        if (currentOpen && !isFullscreenHistoryState(event.state)) {
+          skipHistoryBackRef.current = true
+          handleOpenChange(false)
+        }
+      }
+
+      window.addEventListener("popstate", handlePopstate)
+      return () => window.removeEventListener("popstate", handlePopstate)
+    }, [currentOpen, handleOpenChange, isFullscreenHistoryState])
 
     return (
       <DialogPrimitive.Root open={currentOpen} onOpenChange={handleOpenChange} {...props}>
         <DialogPrimitive.Portal>
           <DialogPrimitive.Overlay
             className={cn(
-              "fixed inset-0 z-50 transition-opacity duration-300 touch-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+              "fixed inset-0 z-40 transition-opacity duration-300 touch-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
               overlayClassName
             )}
             style={{
               backgroundColor: "rgba(15, 23, 42, 0.75)",
               backdropFilter: "blur(2px)",
-              pointerEvents: "none",
+              pointerEvents: "auto",
             }}
             onPointerUp={(event) => {
               if (event.target === event.currentTarget) {
@@ -89,7 +136,7 @@ const FullscreenNotification = React.forwardRef<
           <DialogPrimitive.Content
             ref={ref}
             className={cn(
-              "fixed inset-0 z-50 grid place-items-center overflow-hidden px-6 py-8",
+              "fixed inset-0 z-[60] grid place-items-center overflow-hidden px-6 py-8",
               className
             )}
             style={{
@@ -111,15 +158,20 @@ const FullscreenNotification = React.forwardRef<
                 "relative flex w-full max-w-[520px] flex-col items-center gap-8 overflow-hidden rounded-[44px] p-10 sm:p-12 duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
                 contentClassName
               )}
-              style={contentStyle ?? {
-                backgroundColor: "rgba(255, 255, 255, 0.14)",
-                border: "1px solid rgba(255, 255, 255, 0.18)",
-                boxShadow: "0 30px 70px rgba(15, 23, 42, 0.28), -8px 10px 30px rgba(255, 255, 255, 0.16), 8px 10px 30px rgba(255, 255, 255, 0.16)",
-                backdropFilter: "blur(28px)",
-              }}
+              style={
+                contentStyle
+                  ? { ...contentStyle, pointerEvents: "auto" }
+                  : {
+                    backgroundColor: "rgba(255, 255, 255, 0.14)",
+                    border: "1px solid rgba(255, 255, 255, 0.18)",
+                    boxShadow: "0 30px 70px rgba(15, 23, 42, 0.28), -8px 10px 30px rgba(255, 255, 255, 0.16), 8px 10px 30px rgba(255, 255, 255, 0.16)",
+                    backdropFilter: "blur(28px)",
+                    pointerEvents: "auto",
+                  }
+              }
             >
               {dismissible ? (
-                <DialogPrimitive.Close className="absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/15 bg-white/10 text-foreground/90 shadow-sm transition-colors hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                <DialogPrimitive.Close className="absolute right-4 top-4 z-50 inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/15 bg-white/10 text-foreground/90 shadow-sm transition-colors hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
                   <X className="h-3.5 w-3.5" aria-hidden="true" />
                   <span className="sr-only">{closeLabel}</span>
                 </DialogPrimitive.Close>

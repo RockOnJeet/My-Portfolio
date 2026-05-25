@@ -5,6 +5,14 @@ export const STYLES = `
 
   .bg-void { background-color: var(--bg-dark-800); }
   .text-glow { color: var(--spotify-green); text-shadow: 0 0 10px rgba(29,185,84,0.28); }
+  .hero-command { position: relative; z-index: 0; border-radius: 0.5rem;}
+  .hero-command::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(255,255,255,0.08), rgba(255,255,255,0) 24%, rgba(255,255,255,0.06) 100%);
+    pointer-events: none;
+  }
   .border-glow { border-color: var(--spotify-green); box-shadow: 0 0 10px rgba(29,185,84,0.12); }
   .text-amber-glow { color: var(--warning-500); text-shadow: 0 0 10px rgba(217, 119, 6, 0.28); }
   .text-blue-glow { color: var(--accent-blue); text-shadow: 0 0 10px rgba(59, 130, 246, 0.3); }
@@ -109,6 +117,7 @@ export const STYLES = `
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
+    min-width: 0;
   }
   .text-zone > * {
     position: relative;
@@ -116,9 +125,14 @@ export const STYLES = `
   }
   .text-zone.hero-zone {
     pointer-events: none;
+    overflow-x: hidden;
   }
   .text-zone.hero-zone > * {
     z-index: 40;
+  }
+  .text-zone.hero-zone .animate-typing {
+    white-space: normal;
+    word-break: break-word;
   }
   .text-zone h1,
   .text-zone h2,
