@@ -34,6 +34,7 @@ const TRANSITION = `${DURATION} ${EASING}`;
 const QUEUE_PANEL_ID = "spotify-queue-panel";
 const QUEUE_HEADING_ID = "spotify-queue-heading";
 const SPOTIFY_CONSOLE_URL = "https://rockonjeet.pages.dev/api/spotify/console/";
+const SPOTIFY_SUBSCRIBE_URL = "https://rockonjeet.pages.dev/api/spotify/subscribe/";
 
 type Song = (typeof QUEUE_SONGS)[number];
 type QueueItem = Song & { imageUrl: string | null; trackUrl?: string | null };
@@ -665,7 +666,7 @@ export default function Spotify() {
     fetchSnapshotFallback();
 
     try {
-      eventSource = new EventSource("/api/spotify/subscribe");
+      eventSource = new EventSource(SPOTIFY_SUBSCRIBE_URL);
 
       const handleStreamEvent = (event: Event) => {
         if (!(event instanceof MessageEvent)) return;

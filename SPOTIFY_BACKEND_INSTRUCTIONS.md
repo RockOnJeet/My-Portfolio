@@ -12,6 +12,7 @@ This document describes the current Spotify backend implementation, the intended
 - A Cloudflare Pages endpoint exists at `functions/api/spotify/console.ts` and is currently a request-triggered snapshot endpoint.
 - The current design does not include any auth flow or admin UI.
 - For the current test deploy, the frontend snapshot fetch should point at `https://rockonjeet.pages.dev/api/spotify/console/`.
+- For the current test deploy, the frontend SSE subscription should point at `https://rockonjeet.pages.dev/api/spotify/subscribe/`.
 
 ## Current behavior
 
