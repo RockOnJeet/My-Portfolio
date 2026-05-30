@@ -43,9 +43,13 @@ initTheme();
 if (redirect && isSafeRedirect(redirect)) {
   const target = new URL(redirect, window.location.origin);
 
-  // Replace the address bar with the intended SPA path, then render the app
-  // without forcing a second network navigation back to the missing route.
-  window.history.replaceState({}, "", `${target.pathname}${target.search}${target.hash}`);
+  if (target.pathname.startsWith("/api/")) {
+    // API paths should not be rewritten into the SPA route space.
+  } else {
+    // Replace the address bar with the intended SPA path, then render the app
+    // without forcing a second network navigation back to the missing route.
+    window.history.replaceState({}, "", `${target.pathname}${target.search}${target.hash}`);
+  }
 }
 
 createRoot(document.getElementById("root")!).render(<App />);

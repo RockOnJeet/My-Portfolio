@@ -5,13 +5,18 @@
   <meta charset="utf-8" />
   <title>Redirecting…</title>
   <script>
-    // GitHub Pages / Cloudflare Pages SPA fallback: redirect unknown routes to the app root.
-    // Use a relative URL so project sites resolve to /<repo>/ and root sites resolve to /.
-    const base = new URL("./", window.location.href);
+    // GitHub Pages / Cloudflare Pages SPA fallback: redirect non-API routes to the app root.
+    // API routes must not be bounced back into the SPA shell or they can loop.
     const currentPath = window.location.pathname + window.location.search + window.location.hash;
-    const redirectUrl = new URL(base.toString());
-    redirectUrl.searchParams.set('redirect', currentPath);
-    window.location.replace(redirectUrl.toString());
+    const firstSegment = window.location.pathname.split("/").filter(Boolean)[0] || "";
+    const appBase = firstSegment && firstSegment !== "api" && firstSegment !== "spotify" && firstSegment !== "time-capsule"
+      ? `/${firstSegment}/`
+      : "/";
+    if (!window.location.pathname.startsWith("/api/")) {
+      const redirectUrl = new URL(appBase, window.location.origin);
+      redirectUrl.searchParams.set('redirect', currentPath);
+      window.location.replace(redirectUrl.toString());
+    }
   </script>
 </head>
 
