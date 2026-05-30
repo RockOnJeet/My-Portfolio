@@ -13,6 +13,7 @@ import {
   Smartphone,
   X,
 } from "lucide-react";
+import { FaSpotify } from "react-icons/fa";
 
 const QUEUE_SONGS = [
   { title: "Saadi Galli Aaja", artist: "Ayushmann Khurrana, Neeti Mohan", duration: "4:13", current: true },
@@ -294,6 +295,82 @@ function formatTime(ms: number | null): string {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
+function LoadingScreen({ error }: { error?: string }) {
+  const title = error ? "Error" : "Spotify";
+  const message = error
+    ? "An error has occurred. Please try again later."
+    : "Loading your music moment...";
+
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "#05060a",
+        color: "#f8fafc",
+        padding: 24,
+        fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
+      }}
+    >
+      <div style={{ textAlign: "center", maxWidth: 320, width: "100%" }}>
+        <style>{`@keyframes pulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }`}</style>
+        <FaSpotify
+          size={64}
+          color="#1DB954"
+          style={{ display: "block", margin: "0 auto 18px" }}
+        />
+        <h1
+          style={{
+            fontSize: 22,
+            fontWeight: 700,
+            margin: 0,
+            letterSpacing: "-0.02em",
+          }}
+        >
+          {title}
+        </h1>
+        <p
+          style={{
+            marginTop: 10,
+            fontSize: 14,
+            color: "#94a3b8",
+            lineHeight: 1.6,
+          }}
+        >
+          {message}
+        </p>
+        {!error && (
+          <div
+            style={{
+              marginTop: 20,
+              display: "flex",
+              justifyContent: "center",
+              gap: 8,
+            }}
+          >
+            {[0, 1, 2].map((index) => (
+              <div
+                key={index}
+                style={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: "50%",
+                  background: "#1DB954",
+                  opacity: 0.35,
+                  animation: "pulse 1.2s ease-in-out infinite",
+                  animationDelay: `${index * 120}ms`,
+                }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function DisabledBtn({ children, title }: { children: ReactNode; title: string }) {
   return (
     <button
@@ -493,6 +570,10 @@ export default function Spotify() {
 
   const queuePanelRef = useRef<HTMLDivElement>(null);
   const queueBtnRef = useRef<HTMLButtonElement>(null);
+
+  if (spotifyPayload === null) {
+    return <LoadingScreen error={spotifyError ?? undefined} />;
+  }
 
   useEffect(() => {
     document.title = "Spotify - What he plays";
