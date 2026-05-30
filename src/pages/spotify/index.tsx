@@ -571,10 +571,6 @@ export default function Spotify() {
   const queuePanelRef = useRef<HTMLDivElement>(null);
   const queueBtnRef = useRef<HTMLButtonElement>(null);
 
-  if (spotifyPayload === null) {
-    return <LoadingScreen error={spotifyError ?? undefined} />;
-  }
-
   useEffect(() => {
     document.title = "Spotify - What he plays";
   }, []);
@@ -819,6 +815,17 @@ export default function Spotify() {
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [queueOpen]);
+
+  const showInitialLoading = spotifyLoading && spotifyPayload === null;
+  const showErrorScreen = !spotifyLoading && spotifyError && spotifyPayload === null;
+
+  if (showInitialLoading) {
+    return <LoadingScreen />;
+  }
+
+  if (showErrorScreen) {
+    return <LoadingScreen error={spotifyError} />;
+  }
 
   const queueW = 360;
   const queueH = 420;
