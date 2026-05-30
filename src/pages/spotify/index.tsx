@@ -33,9 +33,12 @@ const DURATION = "340ms";
 const TRANSITION = `${DURATION} ${EASING}`;
 const QUEUE_PANEL_ID = "spotify-queue-panel";
 const QUEUE_HEADING_ID = "spotify-queue-heading";
+const SPOTIFY_BACKEND_ORIGIN = "https://rockonjeet.pages.dev";
+const SPOTIFY_CONSOLE_URL = `${SPOTIFY_BACKEND_ORIGIN}/api/spotify/console/`;
+const SPOTIFY_SUBSCRIBE_URL = `${SPOTIFY_BACKEND_ORIGIN}/api/spotify/subscribe/`;
 
 type Song = (typeof QUEUE_SONGS)[number];
-type QueueItem = Song & { imageUrl: string | null; trackUrl: string | null };
+type QueueItem = Song & { imageUrl: string | null; trackUrl?: string | null };
 
 interface SpotifyConsolePayload {
   playbackData: unknown;
@@ -396,6 +399,19 @@ function QueueRow({ song, imageDataUrl }: { song: QueueItem; imageDataUrl: strin
   return (
     <div
       role="listitem"
+      tabIndex={song.trackUrl ? 0 : undefined}
+      onClick={() => {
+        if (song.trackUrl) {
+          window.open(song.trackUrl, "_blank", "noopener,noreferrer");
+        }
+      }}
+      onKeyDown={(event) => {
+        if (!song.trackUrl) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          window.open(song.trackUrl, "_blank", "noopener,noreferrer");
+        }
+      }}
       style={{
         display: "flex",
         alignItems: "center",
@@ -584,11 +600,40 @@ export default function Spotify() {
 
   useEffect(() => {
     let canceled = false;
-    let intervalId: number | null = null;
+    let eventSource: EventSource | null = null;
 
-    async function fetchSpotifyConsole() {
+    const applyResult = (result: SpotifyConsoleResult) => {
+      if (canceled) return;
+
+      if (!result.success) {
+        setSpotifyError(result.error);
+        setSpotifyPayload(null);
+        setPlaybackTick(null);
+        setSpotifyLoading(false);
+        return;
+      }
+
+      setSpotifyPayload(result.payload);
+      setSpotifyError(null);
+      setSpotifyLoading(false);
+
+      const playback = result.payload.playbackData;
+      if (hasSpotifyPlaybackItem(playback) && isRecord(playback) && typeof playback.progress_ms === "number") {
+        const nextTick = { progressMs: playback.progress_ms, timestamp: Date.now() };
+        setPlaybackTick(nextTick);
+        setLastKnownPlaybackTick(nextTick);
+      } else {
+        setPlaybackTick(null);
+      }
+
+      if (hasSpotifyPlaybackItem(playback) && isRecord((playback as Record<string, unknown>).item)) {
+        setLastKnownPlaybackTrack((playback as Record<string, unknown>).item as Record<string, unknown>);
+      }
+    };
+
+    const fetchSnapshotFallback = async () => {
       try {
-        const response = await fetch("/api/spotify/console");
+        const response = await fetch(SPOTIFY_CONSOLE_URL);
         const rawResult = await response.json();
 
         if (canceled) return;
@@ -596,56 +641,66 @@ export default function Spotify() {
         if (!response.ok) {
           setSpotifyError(`Spotify snapshot request failed with ${response.status}`);
           setSpotifyPayload(null);
+          setSpotifyLoading(false);
           return;
         }
 
         if (!isSpotifyConsoleResult(rawResult)) {
           setSpotifyError("Spotify snapshot endpoint returned an unexpected payload format.");
           setSpotifyPayload(null);
+          setSpotifyLoading(false);
           return;
         }
 
-        if (!rawResult.success) {
-          setSpotifyError(rawResult.error);
-          setSpotifyPayload(null);
-          return;
-        }
-
-        setSpotifyPayload(rawResult.payload);
-        setSpotifyError(null);
-
-        const playback = rawResult.payload.playbackData;
-        if (hasSpotifyPlaybackItem(playback) && isRecord(playback) && typeof playback.progress_ms === "number") {
-          const nextTick = { progressMs: playback.progress_ms, timestamp: Date.now() };
-          setPlaybackTick(nextTick);
-          setLastKnownPlaybackTick(nextTick);
-        } else {
-          setPlaybackTick(null);
-        }
-
-        if (hasSpotifyPlaybackItem(playback) && isRecord((playback as Record<string, unknown>).item)) {
-          setLastKnownPlaybackTrack((playback as Record<string, unknown>).item as Record<string, unknown>);
-        }
+        applyResult(rawResult);
       } catch (error) {
         if (canceled) return;
         setSpotifyPayload(null);
         setSpotifyError(error instanceof Error ? error.message : "Unable to load Spotify data");
         setPlaybackTick(null);
-      } finally {
-        if (!canceled) {
-          setSpotifyLoading(false);
-        }
+        setSpotifyLoading(false);
       }
-    }
+    };
 
-    fetchSpotifyConsole();
-    intervalId = window.setInterval(fetchSpotifyConsole, 1200);
+    fetchSnapshotFallback();
+
+    try {
+      eventSource = new EventSource(SPOTIFY_SUBSCRIBE_URL);
+
+      const handleStreamEvent = (event: Event) => {
+        if (!(event instanceof MessageEvent)) return;
+
+        try {
+          const parsed = JSON.parse(String(event.data)) as unknown;
+          if (isSpotifyConsoleResult(parsed)) {
+            applyResult(parsed);
+            return;
+          }
+
+          if (
+            isRecord(parsed) &&
+            parsed.success === false &&
+            parsed.kind === "error" &&
+            typeof parsed.error === "string"
+          ) {
+            setSpotifyError(parsed.error);
+            setSpotifyLoading(false);
+          }
+        } catch {
+          // Ignore malformed SSE payloads and rely on the snapshot fallback.
+        }
+      };
+
+      eventSource.addEventListener("snapshot", handleStreamEvent);
+      eventSource.addEventListener("update", handleStreamEvent);
+      eventSource.addEventListener("status", handleStreamEvent);
+    } catch {
+      // If EventSource is unavailable, the snapshot fallback still works.
+    }
 
     return () => {
       canceled = true;
-      if (intervalId !== null) {
-        window.clearInterval(intervalId);
-      }
+      eventSource?.close();
     };
   }, []);
 
@@ -934,6 +989,8 @@ export default function Spotify() {
                   artist: playbackArtist,
                   duration: playbackDurationMs ? formatTime(playbackDurationMs) : "--:--",
                   current: true,
+                  imageUrl: null,
+                  trackUrl: getSpotifyTrackUrl(displayPlaybackTrack),
                 }}
                 imageDataUrl={trackImageDataUrl}
               />

@@ -19,6 +19,15 @@ This document describes the current Spotify backend implementation, the intended
 - Each request does a fresh token decryption, refresh, and API fetch.
 - This is fine for a simple snapshot endpoint, but it is not optimized for change detection or low-bandwidth push delivery.
 
+## Test deploy mode
+
+For the Cloudflare test deploy, the Spotify page is configured to fetch the backend from:
+
+- `https://rockonjeet.pages.dev/api/spotify/console/`
+- `https://rockonjeet.pages.dev/api/spotify/subscribe/`
+
+That keeps the page pointed at the deployed Pages backend instead of the local dev server.
+
 ## `/api/spotify/console` endpoint format
 
 The endpoint is a simple GET snapshot API. It returns JSON in one of two shapes:

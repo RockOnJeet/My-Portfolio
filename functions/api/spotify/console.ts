@@ -1,8 +1,8 @@
-import { getSpotifyConsolePayload } from "../../../src/backend/spotify/index";
+import { getSpotifyCoordinator } from "../../../src/backend/spotify/coordinator";
 
 export async function onRequestGet({ env }: { env: Record<string, string | undefined> }) {
   try {
-    const payload = await getSpotifyConsolePayload(env);
+    const payload = await getSpotifyCoordinator().getSnapshot(env);
 
     return new Response(JSON.stringify({ success: true, payload }), {
       status: 200,
