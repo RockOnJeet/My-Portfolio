@@ -5,6 +5,8 @@ import { initTheme } from "./lib/theme";
 
 // GitHub Pages SPA fallback support: if a 404 redirected here with a `redirect=` query, navigate there.
 // Only allow internal redirects (same origin + relative path).
+const KNOWN_APP_PATHS = new Set(["/", "/spotify", "/time-capsule"]);
+
 function isSafeRedirect(uri: string) {
   try {
     if (typeof uri !== "string") return false;
@@ -43,9 +45,7 @@ initTheme();
 if (redirect && isSafeRedirect(redirect)) {
   const target = new URL(redirect, window.location.origin);
 
-  if (target.pathname.startsWith("/api/")) {
-    // API paths should not be rewritten into the SPA route space.
-  } else {
+  if (KNOWN_APP_PATHS.has(target.pathname)) {
     // Replace the address bar with the intended SPA path, then render the app
     // without forcing a second network navigation back to the missing route.
     window.history.replaceState({}, "", `${target.pathname}${target.search}${target.hash}`);

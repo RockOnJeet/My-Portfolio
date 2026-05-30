@@ -5,15 +5,13 @@
   <meta charset="utf-8" />
   <title>Redirecting…</title>
   <script>
-    // GitHub Pages / Cloudflare Pages SPA fallback: redirect non-API routes to the app root.
-    // API routes must not be bounced back into the SPA shell or they can loop.
+    // GitHub Pages / Cloudflare Pages SPA fallback: only recover known app routes.
+    // Everything else should remain a hard 404 instead of looping back into the SPA.
     const currentPath = window.location.pathname + window.location.search + window.location.hash;
-    const firstSegment = window.location.pathname.split("/").filter(Boolean)[0] || "";
-    const appBase = firstSegment && firstSegment !== "api" && firstSegment !== "spotify" && firstSegment !== "time-capsule"
-      ? `/${firstSegment}/`
-      : "/";
-    if (!window.location.pathname.startsWith("/api/")) {
-      const redirectUrl = new URL(appBase, window.location.origin);
+    const knownPaths = new Set(["/", "/spotify", "/time-capsule"]);
+
+    if (knownPaths.has(window.location.pathname)) {
+      const redirectUrl = new URL("/", window.location.origin);
       redirectUrl.searchParams.set('redirect', currentPath);
       window.location.replace(redirectUrl.toString());
     }
