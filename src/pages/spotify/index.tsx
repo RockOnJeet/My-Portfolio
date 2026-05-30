@@ -34,8 +34,8 @@ const TRANSITION = `${DURATION} ${EASING}`;
 const QUEUE_PANEL_ID = "spotify-queue-panel";
 const QUEUE_HEADING_ID = "spotify-queue-heading";
 const SPOTIFY_BACKEND_ORIGIN = "https://rockonjeet.pages.dev";
-const SPOTIFY_CONSOLE_URL = `${SPOTIFY_BACKEND_ORIGIN}/api/spotify/console/`;
-const SPOTIFY_SUBSCRIBE_URL = `${SPOTIFY_BACKEND_ORIGIN}/api/spotify/subscribe/`;
+const SPOTIFY_CONSOLE_URL = `${SPOTIFY_BACKEND_ORIGIN}/api/spotify/console`;
+const SPOTIFY_SUBSCRIBE_URL = `${SPOTIFY_BACKEND_ORIGIN}/api/spotify/subscribe`;
 
 type Song = (typeof QUEUE_SONGS)[number];
 type QueueItem = Song & { imageUrl: string | null; trackUrl?: string | null };

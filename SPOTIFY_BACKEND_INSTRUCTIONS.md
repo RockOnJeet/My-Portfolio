@@ -23,8 +23,8 @@ This document describes the current Spotify backend implementation, the intended
 
 For the Cloudflare test deploy, the Spotify page is configured to fetch the backend from:
 
-- `https://rockonjeet.pages.dev/api/spotify/console/`
-- `https://rockonjeet.pages.dev/api/spotify/subscribe/`
+- `https://rockonjeet.pages.dev/api/spotify/console`
+- `https://rockonjeet.pages.dev/api/spotify/subscribe`
 
 That keeps the page pointed at the deployed Pages backend instead of the local dev server.
 
