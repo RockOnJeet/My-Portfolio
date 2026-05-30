@@ -11,6 +11,7 @@ This document describes the current Spotify backend implementation, the intended
   - fetching `/v1/me/player` and `/v1/me/player/queue`
 - A Cloudflare Pages endpoint exists at `functions/api/spotify/console.ts` and is currently a request-triggered snapshot endpoint.
 - The current design does not include any auth flow or admin UI.
+- For the current test deploy, the frontend snapshot fetch should point at `https://rockonjeet.pages.dev/api/spotify/console/`.
 
 ## Current behavior
 
@@ -18,15 +19,6 @@ This document describes the current Spotify backend implementation, the intended
 - There is no internal polling loop, cache, or durable state.
 - Each request does a fresh token decryption, refresh, and API fetch.
 - This is fine for a simple snapshot endpoint, but it is not optimized for change detection or low-bandwidth push delivery.
-
-## Test deploy mode
-
-For the Cloudflare test deploy, the Spotify page is configured to fetch the backend from:
-
-- `https://rockonjeet.pages.dev/api/spotify/console`
-- `https://rockonjeet.pages.dev/api/spotify/subscribe`
-
-That keeps the page pointed at the deployed Pages backend instead of the local dev server.
 
 ## `/api/spotify/console` endpoint format
 
