@@ -34,7 +34,7 @@ const QUEUE_PANEL_ID = "spotify-queue-panel";
 const QUEUE_HEADING_ID = "spotify-queue-heading";
 
 type Song = (typeof QUEUE_SONGS)[number];
-type QueueItem = Song & { imageUrl: string | null };
+type QueueItem = Song & { imageUrl: string | null; trackUrl: string | null };
 
 interface SpotifyConsolePayload {
   playbackData: unknown;
@@ -103,6 +103,23 @@ function hasSpotifyPlaybackItem(value: unknown): boolean {
 function getSpotifyTrackTitle(track: unknown): string {
   if (isRecord(track) && typeof track.name === "string") return track.name;
   return "Unknown track";
+}
+
+function getSpotifyTrackUrl(track: unknown): string | null {
+  if (!isRecord(track)) return null;
+
+  if (isRecord(track.external_urls) && typeof track.external_urls.spotify === "string") {
+    return track.external_urls.spotify;
+  }
+
+  if (typeof track.uri === "string" && track.uri.startsWith("spotify:")) {
+    const parts = track.uri.split(":");
+    if (parts.length >= 3 && parts[1] === "track") {
+      return `https://open.spotify.com/track/${parts[2]}`;
+    }
+  }
+
+  return null;
 }
 
 function getSpotifyTrackArtists(track: unknown): string {
@@ -298,7 +315,7 @@ function DisabledBtn({ children, title }: { children: ReactNode; title: string }
   );
 }
 
-function QueueRow({ song, imageDataUrl }: { song: Song; imageDataUrl: string | null }) {
+function QueueRow({ song, imageDataUrl }: { song: QueueItem; imageDataUrl: string | null }) {
   return (
     <div
       role="listitem"
@@ -310,7 +327,7 @@ function QueueRow({ song, imageDataUrl }: { song: Song; imageDataUrl: string | n
         borderRadius: 8,
         margin: "0 8px",
         background: song.current ? "rgba(255,255,255,0.04)" : "transparent",
-        cursor: "default",
+        cursor: song.trackUrl ? "pointer" : "default",
       }}
     >
       <div
@@ -364,7 +381,21 @@ function QueueRow({ song, imageDataUrl }: { song: Song; imageDataUrl: string | n
             textOverflow: "ellipsis",
           }}
         >
-          {song.title}
+          {song.trackUrl ? (
+            <a
+              href={song.trackUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color: song.current ? "var(--spotify-green)" : "var(--muted-500)",
+                textDecoration: "none",
+              }}
+            >
+              {song.title}
+            </a>
+          ) : (
+            song.title
+          )}
         </p>
         <p
           style={{
@@ -408,6 +439,7 @@ export default function Spotify() {
     : getSpotifyQueueNowPlaying(queueData);
   const displayPlaybackTrack = playbackTrack ?? lastKnownPlaybackTrack;
   const playbackTitle = getSpotifyTrackTitle(displayPlaybackTrack);
+  const playbackTrackUrl = getSpotifyTrackUrl(displayPlaybackTrack);
   const playbackArtist = getSpotifyTrackArtists(displayPlaybackTrack);
   const playbackDurationMs = getSpotifyTrackDurationMs(displayPlaybackTrack);
   const playbackProgressMs =
@@ -446,6 +478,7 @@ export default function Spotify() {
       artist: getSpotifyTrackArtists(track),
       duration: formatTime(getSpotifyTrackDurationMs(track)),
       current: false,
+      trackUrl: getSpotifyTrackUrl(track),
     };
   });
 
@@ -975,7 +1008,23 @@ export default function Spotify() {
               textOverflow: "ellipsis",
             }}
           >
-            {noSongPlaying ? "No song playing XoX" : playbackTitle}
+            {noSongPlaying ? (
+              "No song playing XoX"
+            ) : playbackTrackUrl ? (
+              <a
+                href={playbackTrackUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  color: "var(--muted-100)",
+                  textDecoration: "none",
+                }}
+              >
+                {playbackTitle}
+              </a>
+            ) : (
+              playbackTitle
+            )}
           </h1>
           {!noSongPlaying && (
             <p
