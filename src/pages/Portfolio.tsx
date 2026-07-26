@@ -8,6 +8,7 @@ import { safeExternalUrl, safeMailtoHref } from "@/lib/security";
 import { isSupportedEditorLanguage, tokenizeForEditor } from "@/lib/syntaxHighlight";
 import { AnonymousMessageBox } from "@/components/ui/AnonymousMessageBox";
 import { FullscreenNotification } from "@/components/ui/fullscreen-notification";
+import { Section, SectionHeading } from "@/components/layout/Section";
 import { ProjectCard } from "@/components/portfolio/ProjectCard";
 import { SkillCard } from "@/components/portfolio/SkillCard";
 import type { ThemedToken } from "shiki";
@@ -968,53 +969,48 @@ function About() {
     </section>
   );
 }
-
-/* ── Projects Section ────────────────────────────────────── */
+/* -- Projects Section -------------------------------------- */
 function Projects() {
   return (
-    <section id="projects" className="bg-dark-800 border-t border-white/10 py-24 px-4">
-      <div className="max-w-[1280px] mx-auto">
-        <p className="text-success-500 font-mono text-sm mb-3">// projects</p>
-        <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-          Things I've built
-        </h2>
-        <p className="text-white/50 text-lg mb-8 max-w-2xl">
-          My selected projects - the ones I've spent my time on. Presenting...
-        </p>
+    <Section id="projects" className="bg-dark-800">
+      <SectionHeading
+        eyebrow="// projects"
+        title="Things I've built"
+        description="My selected projects - the ones I've spent my time on. Presenting..."
+        titleClassName="mb-4"
+        descriptionClassName="mb-8"
+      />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {projects.map((project) => (
-            <ProjectCard key={project.name} project={project} />
-          ))}
-        </div>
-        <div className="mt-4 text-right">
-          <span className="text-white/40 text-sm">... and some more.</span>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {projects.map((project) => (
+          <ProjectCard key={project.name} project={project} />
+        ))}
       </div>
-    </section>
+      <div className="mt-4 text-right">
+        <span className="text-white/40 text-sm">... and some more.</span>
+      </div>
+    </Section>
   );
 }
 
-/* ── Skills Section ──────────────────────────────────────── */
+/* -- Skills Section ---------------------------------------- */
 function Skills() {
   return (
-    <section id="skills" className="bg-dark-700 border-t border-white/10 py-24 px-4">
-      <div className="max-w-[1280px] mx-auto">
-        <p className="text-success-500 font-mono text-sm mb-3">// skills</p>
-        <h2 className="text-3xl md:text-4xl font-bold text-white mb-12">
-          My actual stack
-        </h2>
+    <Section id="skills" className="bg-dark-700">
+      <SectionHeading
+        eyebrow="// skills"
+        title="My actual stack"
+        titleClassName="mb-12"
+      />
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {skills.map((group) => (
-            <SkillCard key={group.category} group={group} />
-          ))}
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {skills.map((group) => (
+          <SkillCard key={group.category} group={group} />
+        ))}
       </div>
-    </section>
+    </Section>
   );
 }
-
 /* ── Contact Section ─────────────────────────────────────── */
 function Contact() {
   const decodedEmail = decodeBase64(about.email)
