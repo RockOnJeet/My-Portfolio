@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Portfolio from "@/pages/Portfolio";
 import TimeCapsule from "@/pages/time-capsule";
 import Spotify from "@/pages/spotify";
+import Admin from "@/pages/admin";
 
 function App() {
   return (
@@ -13,8 +14,11 @@ function App() {
           <Route path="/" component={Portfolio} />
           <Route path="/time-capsule" component={TimeCapsule} />
           <Route path="/spotify" component={Spotify} />
+          <Route path="/admin" component={Admin} />
         </Switch>
-      </WouterRouter>      <Toaster />    </TooltipProvider>
+      </WouterRouter>
+      <Toaster />
+    </TooltipProvider>
   );
 }
 
