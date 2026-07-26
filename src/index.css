@@ -177,6 +177,14 @@
   color: var(--warning-500);
 }
 
+.bg-warning-500 {
+  background: var(--warning-500);
+}
+
+.bg-danger-500 {
+  background: var(--danger-500);
+}
+
 .text-danger-500 {
   color: var(--danger-500);
 }

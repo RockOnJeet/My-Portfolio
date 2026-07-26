@@ -6,8 +6,9 @@
  */
 
 import { xmlCodeAbout, jsonCodeProjects, pyCodeSkills, cppCodeContact } from "./codeSnippets";
+import type { AboutConfig, FeedbackFormConfig, HeroConfig, NavigationConfig, Project, SkillGroup } from "@/types/portfolio";
 
-export const nav = {
+export const nav: NavigationConfig = {
   /** Your name shown in the top-left logo area */
   name: "RockOnJeet!",
 
@@ -29,7 +30,7 @@ export const nav = {
   cta: { label: "Hire me", href: "#contact" },
 };
 
-export const hero = {
+export const hero: HeroConfig = {
   /** Large headline — make it bold and personal */
   headline: "I'm\nnot a\nWebDev.",
 
@@ -127,7 +128,7 @@ export const hero = {
   ],
 };
 
-export const about = {
+export const about: AboutConfig = {
   /** Short bio paragraph */
   bio: "I'm an embedded systems developer focused on firmware, power electronics, and control systems. I work primarily with Embedded C and Python to build efficient hardware - software systems, from BLDC motor controllers and gate-driver hardware to robotics prototypes and experimental control algorithms.",
 
@@ -153,7 +154,7 @@ export const about = {
   },
 };
 
-export const projects = [
+export const projects: Project[] = [
   {
     name: "Omni-Bot",
     description:
@@ -216,7 +217,7 @@ export const projects = [
   },
 ];
 
-export const skills = [
+export const skills: SkillGroup[] = [
   {
     category: "Languages",
     items: ["C/C++", "Python", "MATLAB / Simulink", "HTML / CSS / JS"],
@@ -243,7 +244,7 @@ export const skills = [
  *
  * If you leave `formId` blank, the feedback widget will be disabled.
  */
-export const feedbackForm = {
+export const feedbackForm: FeedbackFormConfig = {
   formId: "1FAIpQLScZJdX8WApKRrfZskhTi6tHdhHpBMnoxcQdiTVElfdmnI1_BQ",
   entryIds: {
     displayName: "entry.126889621",
