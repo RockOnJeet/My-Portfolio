@@ -8,8 +8,10 @@ import { safeExternalUrl, safeMailtoHref } from "@/lib/security";
 import { isSupportedEditorLanguage, tokenizeForEditor } from "@/lib/syntaxHighlight";
 import { AnonymousMessageBox } from "@/components/ui/AnonymousMessageBox";
 import { FullscreenNotification } from "@/components/ui/fullscreen-notification";
+import { Section, SectionHeading } from "@/components/layout/Section";
 import { ProjectCard } from "@/components/portfolio/ProjectCard";
 import { SkillCard } from "@/components/portfolio/SkillCard";
+import { StatCard } from "@/components/portfolio/StatCard";
 import type { ThemedToken } from "shiki";
 
 const SECTION_IDS = ["about", "projects", "skills", "contact", "feedback"];
@@ -928,93 +930,79 @@ function About() {
   const emailHref = safeMailtoHref(decodedEmail)
 
   return (
-    <section id="about" className="bg-dark-800 border-t border-white/10 py-24 px-4">
-      <div className="max-w-[1280px] mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          <div>
-            <p className="text-success-500 font-mono text-sm mb-3">// about me</p>
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-              Engineering intelligent embedded systems and robotics
-            </h2>
-            <p className="text-white/60 text-lg leading-relaxed mb-8">{about.bio}</p>
+    <Section id="about" className="bg-dark-800">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+        <div>
+          <SectionHeading
+            eyebrow="// about me"
+            title="Engineering intelligent embedded systems and robotics"
+            titleClassName="mb-6"
+          />
+          <p className="text-white/60 text-lg leading-relaxed mb-8">{about.bio}</p>
 
-            <div className="flex flex-wrap gap-4 mb-8 text-sm">
-              {about.email && emailHref && (
-                <a
-                  href={emailHref}
-                  className="text-accent-blue hover:underline"
-                >
-                  {decodedEmail}
-                </a>
-              )}
-              {about.location && (
-                <span className="text-white/40">{about.location}</span>
-              )}
-            </div>
-          </div>
-
-          {/* Stats grid */}
-          <div className="grid grid-cols-2 gap-4">
-            {about.stats.map((stat) => (
-              <div key={stat.label}
-                className="rounded-xl border border-white/10 bg-dark-700 p-6 text-center">
-                <div className="text-4xl font-bold text-white mb-1">{stat.value}</div>
-                <div className="text-sm text-white/50">{stat.label}</div>
-              </div>
-            ))}
+          <div className="flex flex-wrap gap-4 mb-8 text-sm">
+            {about.email && emailHref && (
+              <a href={emailHref} className="text-accent-blue hover:underline">
+                {decodedEmail}
+              </a>
+            )}
+            {about.location && (
+              <span className="text-white/40">{about.location}</span>
+            )}
           </div>
         </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          {about.stats.map((stat) => (
+            <StatCard key={stat.label} value={stat.value} label={stat.label} />
+          ))}
+        </div>
       </div>
-    </section>
+    </Section>
   );
 }
-
-/* ── Projects Section ────────────────────────────────────── */
+/* -- Projects Section -------------------------------------- */
 function Projects() {
   return (
-    <section id="projects" className="bg-dark-800 border-t border-white/10 py-24 px-4">
-      <div className="max-w-[1280px] mx-auto">
-        <p className="text-success-500 font-mono text-sm mb-3">// projects</p>
-        <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-          Things I've built
-        </h2>
-        <p className="text-white/50 text-lg mb-8 max-w-2xl">
-          My selected projects - the ones I've spent my time on. Presenting...
-        </p>
+    <Section id="projects" className="bg-dark-800">
+      <SectionHeading
+        eyebrow="// projects"
+        title="Things I've built"
+        description="My selected projects - the ones I've spent my time on. Presenting..."
+        titleClassName="mb-4"
+        descriptionClassName="mb-8"
+      />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {projects.map((project) => (
-            <ProjectCard key={project.name} project={project} />
-          ))}
-        </div>
-        <div className="mt-4 text-right">
-          <span className="text-white/40 text-sm">... and some more.</span>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {projects.map((project) => (
+          <ProjectCard key={project.name} project={project} />
+        ))}
       </div>
-    </section>
+      <div className="mt-4 text-right">
+        <span className="text-white/40 text-sm">... and some more.</span>
+      </div>
+    </Section>
   );
 }
 
-/* ── Skills Section ──────────────────────────────────────── */
+/* -- Skills Section ---------------------------------------- */
 function Skills() {
   return (
-    <section id="skills" className="bg-dark-700 border-t border-white/10 py-24 px-4">
-      <div className="max-w-[1280px] mx-auto">
-        <p className="text-success-500 font-mono text-sm mb-3">// skills</p>
-        <h2 className="text-3xl md:text-4xl font-bold text-white mb-12">
-          My actual stack
-        </h2>
+    <Section id="skills" className="bg-dark-700">
+      <SectionHeading
+        eyebrow="// skills"
+        title="My actual stack"
+        titleClassName="mb-12"
+      />
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {skills.map((group) => (
-            <SkillCard key={group.category} group={group} />
-          ))}
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {skills.map((group) => (
+          <SkillCard key={group.category} group={group} />
+        ))}
       </div>
-    </section>
+    </Section>
   );
 }
-
 /* ── Contact Section ─────────────────────────────────────── */
 function Contact() {
   const decodedEmail = decodeBase64(about.email)
@@ -1024,8 +1012,7 @@ function Contact() {
   const linkedinUrl = safeExternalUrl(decodeBase64(about.socials.linkedin ?? ""))
 
   return (
-    <section id="contact" className="bg-dark-800 border-t border-white/10 py-24 px-4">
-      <div className="max-w-[1280px] mx-auto text-center">
+    <Section id="contact" className="bg-dark-800" containerClassName="text-center">
         {/* Glow behind the contact section */}
         <div className="relative inline-block">
           <div className="absolute inset-0 -m-8 rounded-full blur-[80px]" style={{ background: "var(--accent-purple)", opacity: 0.2 }} />
@@ -1084,13 +1071,12 @@ function Contact() {
             </div>
           </div>
         </div>
-      </div>
-      <div className="max-w-[1280px] mx-auto mt-16 px-4">
+      <div className="mt-16 px-4">
         {/* Hidden anchor for deep-linking to the feedback box (used by scroll spy) */}
         <div id="feedback" className="h-0" aria-hidden="true" />
         <AnonymousMessageBox />
       </div>
-    </section>
+    </Section>
   );
 }
 
