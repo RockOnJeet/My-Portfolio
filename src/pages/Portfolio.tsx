@@ -771,10 +771,14 @@ function Hero() {
               "px-4 py-2.5 flex items-center gap-2 border-b border-white/10 select-none " +
               (editorExpanded ? "bg-dark-700" : "bg-dark-700 cursor-pointer")
             }
+            onClick={(event) => {
+              if (!editorExpanded && !(event.target as HTMLElement).closest("button")) {
+                expandEditor();
+              }
+            }}
             onDoubleClick={(event) => {
-              // Prevent double-click from selecting tab text
               event.preventDefault();
-              toggleEditor();
+              if (editorExpanded) collapseEditor();
             }}
           >
             <div className="flex gap-1.5">
