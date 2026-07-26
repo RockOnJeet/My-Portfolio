@@ -11,6 +11,7 @@ import AdminSite from "@/pages/admin/site";
 import AdminLogs from "@/pages/admin/logs";
 import AdminSpotifyIntegration from "@/pages/admin/integrations/spotify";
 import AdminGitHubIntegration from "@/pages/admin/integrations/github";
+import NotFound from "@/pages/not-found";
 
 function App() {
   return (
@@ -33,6 +34,8 @@ function App() {
           <Route path="/admin/mcp" component={AdminMcp} />
           <Route path="/admin/site" component={AdminSite} />
           <Route path="/admin/logs" component={AdminLogs} />
+          <Route path="/admin/logs" component={AdminLogs} />
+          <Route component={NotFound} />
         </Switch>
       </WouterRouter>
       <Toaster />
