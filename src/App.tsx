@@ -9,6 +9,7 @@ import AdminIntegrations from "@/pages/admin/integrations";
 import AdminMcp from "@/pages/admin/mcp";
 import AdminSite from "@/pages/admin/site";
 import AdminLogs from "@/pages/admin/logs";
+import AdminSpotifyIntegration from "@/pages/admin/integrations/spotify";
 
 function App() {
   return (
@@ -19,6 +20,10 @@ function App() {
           <Route path="/time-capsule" component={TimeCapsule} />
           <Route path="/spotify" component={Spotify} />
           <Route path="/admin" component={Admin} />
+          <Route
+            path="/admin/integrations/spotify"
+            component={AdminSpotifyIntegration}
+          />
           <Route path="/admin/integrations" component={AdminIntegrations} />
           <Route path="/admin/mcp" component={AdminMcp} />
           <Route path="/admin/site" component={AdminSite} />
