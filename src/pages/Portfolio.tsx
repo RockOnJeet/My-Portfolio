@@ -11,6 +11,7 @@ import { FullscreenNotification } from "@/components/ui/fullscreen-notification"
 import { Section, SectionHeading } from "@/components/layout/Section";
 import { ProjectCard } from "@/components/portfolio/ProjectCard";
 import { SkillCard } from "@/components/portfolio/SkillCard";
+import { StatCard } from "@/components/portfolio/StatCard";
 import type { ThemedToken } from "shiki";
 
 const SECTION_IDS = ["about", "projects", "skills", "contact", "feedback"];
@@ -929,44 +930,35 @@ function About() {
   const emailHref = safeMailtoHref(decodedEmail)
 
   return (
-    <section id="about" className="bg-dark-800 border-t border-white/10 py-24 px-4">
-      <div className="max-w-[1280px] mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          <div>
-            <p className="text-success-500 font-mono text-sm mb-3">// about me</p>
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-              Engineering intelligent embedded systems and robotics
-            </h2>
-            <p className="text-white/60 text-lg leading-relaxed mb-8">{about.bio}</p>
+    <Section id="about" className="bg-dark-800">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+        <div>
+          <SectionHeading
+            eyebrow="// about me"
+            title="Engineering intelligent embedded systems and robotics"
+            titleClassName="mb-6"
+          />
+          <p className="text-white/60 text-lg leading-relaxed mb-8">{about.bio}</p>
 
-            <div className="flex flex-wrap gap-4 mb-8 text-sm">
-              {about.email && emailHref && (
-                <a
-                  href={emailHref}
-                  className="text-accent-blue hover:underline"
-                >
-                  {decodedEmail}
-                </a>
-              )}
-              {about.location && (
-                <span className="text-white/40">{about.location}</span>
-              )}
-            </div>
-          </div>
-
-          {/* Stats grid */}
-          <div className="grid grid-cols-2 gap-4">
-            {about.stats.map((stat) => (
-              <div key={stat.label}
-                className="rounded-xl border border-white/10 bg-dark-700 p-6 text-center">
-                <div className="text-4xl font-bold text-white mb-1">{stat.value}</div>
-                <div className="text-sm text-white/50">{stat.label}</div>
-              </div>
-            ))}
+          <div className="flex flex-wrap gap-4 mb-8 text-sm">
+            {about.email && emailHref && (
+              <a href={emailHref} className="text-accent-blue hover:underline">
+                {decodedEmail}
+              </a>
+            )}
+            {about.location && (
+              <span className="text-white/40">{about.location}</span>
+            )}
           </div>
         </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          {about.stats.map((stat) => (
+            <StatCard key={stat.label} value={stat.value} label={stat.label} />
+          ))}
+        </div>
       </div>
-    </section>
+    </Section>
   );
 }
 /* -- Projects Section -------------------------------------- */
