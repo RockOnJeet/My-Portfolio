@@ -1012,8 +1012,7 @@ function Contact() {
   const linkedinUrl = safeExternalUrl(decodeBase64(about.socials.linkedin ?? ""))
 
   return (
-    <section id="contact" className="bg-dark-800 border-t border-white/10 py-24 px-4">
-      <div className="max-w-[1280px] mx-auto text-center">
+    <Section id="contact" className="bg-dark-800" containerClassName="text-center">
         {/* Glow behind the contact section */}
         <div className="relative inline-block">
           <div className="absolute inset-0 -m-8 rounded-full blur-[80px]" style={{ background: "var(--accent-purple)", opacity: 0.2 }} />
@@ -1072,13 +1071,12 @@ function Contact() {
             </div>
           </div>
         </div>
-      </div>
-      <div className="max-w-[1280px] mx-auto mt-16 px-4">
+      <div className="mt-16 px-4">
         {/* Hidden anchor for deep-linking to the feedback box (used by scroll spy) */}
         <div id="feedback" className="h-0" aria-hidden="true" />
         <AnonymousMessageBox />
       </div>
-    </section>
+    </Section>
   );
 }
 
