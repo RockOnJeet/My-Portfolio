@@ -10,6 +10,7 @@ import AdminMcp from "@/pages/admin/mcp";
 import AdminSite from "@/pages/admin/site";
 import AdminLogs from "@/pages/admin/logs";
 import AdminSpotifyIntegration from "@/pages/admin/integrations/spotify";
+import AdminGitHubIntegration from "@/pages/admin/integrations/github";
 
 function App() {
   return (
@@ -23,6 +24,10 @@ function App() {
           <Route
             path="/admin/integrations/spotify"
             component={AdminSpotifyIntegration}
+          />
+          <Route
+            path="/admin/integrations/github"
+            component={AdminGitHubIntegration}
           />
           <Route path="/admin/integrations" component={AdminIntegrations} />
           <Route path="/admin/mcp" component={AdminMcp} />
