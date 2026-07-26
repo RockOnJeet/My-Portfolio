@@ -1,21 +1,26 @@
+import AdminLayout from "@/components/admin/AdminLayout";
+
 export default function Admin() {
   return (
-    <main className="min-h-screen bg-dark-900 text-white">
-      <div className="mx-auto flex min-h-screen max-w-7xl items-center justify-center px-6">
-        <div className="text-center">
-          <p className="mb-2 text-sm font-medium text-blue-400">
-            Control Plane
-          </p>
-
-          <h1 className="text-3xl font-semibold tracking-tight">
-            Portfolio Admin
+    <AdminLayout>
+      <div className="mx-auto max-w-[1192px] px-6 py-9 md:px-12">
+        <header>
+          <h1 className="text-[30px] font-semibold tracking-tight text-white">
+            Dashboard
           </h1>
 
-          <p className="mt-3 text-sm text-white/50">
-            Admin interface foundation is active.
+          <p className="mt-1 text-[13px] text-white/40">
+            Control-plane summary · detailed configuration lives in each
+            management page
+          </p>
+        </header>
+
+        <div className="mt-12 rounded-lg border border-dashed border-white/10 px-6 py-16 text-center">
+          <p className="text-sm text-white/35">
+            Dashboard components will be added in the next checkpoint.
           </p>
         </div>
       </div>
-    </main>
+    </AdminLayout>
   );
 }
