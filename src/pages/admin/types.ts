@@ -33,5 +33,7 @@ export interface DiagnosticLogEntry {
   timestamp: string;
   severity: "info" | "warn" | "error";
   subsystem: string;
+  operation: string;
   message: string;
+  durationMs?: number;
 }
