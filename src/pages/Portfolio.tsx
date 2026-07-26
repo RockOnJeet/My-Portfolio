@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useLayoutEffect, useRef, useCallback, type CSSProperties, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
-import { Star, ExternalLink, ChevronDown, Menu, X } from "lucide-react";
+import { ChevronDown, Menu, X } from "lucide-react";
 import { FaCloudflare, FaGithub, FaInstagram, FaLinkedin } from "react-icons/fa";
 import { nav, hero, about, projects, skills } from "@/data/config";
 import { decodeBase64 } from "@/lib/utils";
@@ -8,6 +8,8 @@ import { safeExternalUrl, safeMailtoHref } from "@/lib/security";
 import { isSupportedEditorLanguage, tokenizeForEditor } from "@/lib/syntaxHighlight";
 import { AnonymousMessageBox } from "@/components/ui/AnonymousMessageBox";
 import { FullscreenNotification } from "@/components/ui/fullscreen-notification";
+import { ProjectCard } from "@/components/portfolio/ProjectCard";
+import { SkillCard } from "@/components/portfolio/SkillCard";
 import type { ThemedToken } from "shiki";
 
 const SECTION_IDS = ["about", "projects", "skills", "contact", "feedback"];
@@ -982,59 +984,7 @@ function Projects() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {projects.map((project) => (
-            <div
-              key={project.name}
-              className="group flex flex-col rounded-xl border border-white/10 bg-dark-700 p-6 transition-all duration-200 hover:border-white/20 hover:bg-dark-700"
-            >
-              {(() => {
-                const projectUrl = safeExternalUrl(project.url)
-                const liveUrl = safeExternalUrl(project.liveUrl)
-
-                return (
-                  <>
-                    <div className="flex items-start justify-between mb-3">
-                      {projectUrl ? (
-                        <a
-                          href={projectUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          referrerPolicy="no-referrer"
-                          className="font-semibold text-accent-blue hover:underline"
-                        >
-                          {project.name}
-                        </a>
-                      ) : (
-                        <span className="font-semibold text-white/50">{project.name}</span>
-                      )}
-                      <span className="text-xs text-white/30 border border-white/10 rounded-full px-2 py-0.5 ml-2 shrink-0">
-                        Public
-                      </span>
-                    </div>
-                    <p className="text-sm text-white/50 leading-5 flex-1 mb-4">
-                      {project.description}
-                    </p>
-                    <div className="flex items-center gap-4 text-xs text-white/40">
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: project.languageColor }} />
-                        {project.language}
-                      </span>
-                      <span className="flex items-center gap-1"><Star size={12} />{project.stars}</span>
-                      {liveUrl && (
-                        <a
-                          href={liveUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          referrerPolicy="no-referrer"
-                          className="ml-auto flex items-center gap-1 hover:text-white transition-colors"
-                        >
-                          <ExternalLink size={12} /> Live
-                        </a>
-                      )}
-                    </div>
-                  </>
-                )
-              })()}
-            </div>
+            <ProjectCard key={project.name} project={project} />
           ))}
         </div>
         <div className="mt-4 text-right">
@@ -1057,21 +1007,7 @@ function Skills() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {skills.map((group) => (
-            <div key={group.category}
-              className="rounded-xl border border-white/10 bg-dark-800 p-6 space-y-3">
-              <h3 className="text-sm font-semibold text-white/60 uppercase tracking-wider">
-                {group.category}
-              </h3>
-              <ul className="space-y-2">
-                {group.items.map((item) => (
-                  <li key={item}
-                    className="flex items-center gap-2 text-sm text-white/80">
-                    <span className="w-1.5 h-1.5 rounded-full bg-success-500" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <SkillCard key={group.category} group={group} />
           ))}
         </div>
       </div>
