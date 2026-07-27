@@ -45,6 +45,8 @@ export default function TimeCapsule() {
   const [activeTickerTime, setActiveTickerTime] = useState("23:47");
   const [selectedStack, setSelectedStack] = useState<PhotoStack | null>(null);
   const [collectedStacks, setCollectedStacks] = useState<PhotoStack[]>([]);
+  const [stackCarouselApi, setStackCarouselApi] = useState<CarouselApi | null>(null);
+  const [activeStackPhotoIndex, setActiveStackPhotoIndex] = useState(0);
   type VideoSource = { src: string; title: string; caption: string };
   const [videos, setVideos] = useState<VideoSource[]>([]);
   const videoRefs = useRef<Array<HTMLVideoElement | null>>([]);
@@ -97,6 +99,29 @@ export default function TimeCapsule() {
     const timer = setTimeout(() => setBooted(true), 2800);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    setActiveStackPhotoIndex(0);
+  }, [selectedStack]);
+
+  useEffect(() => {
+    if (!stackCarouselApi) {
+      return;
+    }
+
+    const handleSelect = () => {
+      setActiveStackPhotoIndex(stackCarouselApi.selectedScrollSnap());
+    };
+
+    handleSelect();
+    stackCarouselApi.on("select", handleSelect);
+    stackCarouselApi.on("reInit", handleSelect);
+
+    return () => {
+      stackCarouselApi.off("select", handleSelect);
+      stackCarouselApi.off("reInit", handleSelect);
+    };
+  }, [stackCarouselApi]);
 
   useEffect(() => {
     if (!videoCarouselApi) {
@@ -474,6 +499,7 @@ export default function TimeCapsule() {
                                   }}
                                   className="absolute inset-0 h-full w-full object-contain object-center"
                                   controls
+                                  preload={index === activeVideoIndex ? "metadata" : "none"}
                                   muted
                                   loop
                                   playsInline
@@ -700,17 +726,21 @@ export default function TimeCapsule() {
       >
         {selectedStack ? (
           <div className="space-y-6 text-center">
-            <Carousel className="relative" opts={{ align: "start", containScroll: "trimSnaps", loop: true }}>
+            <Carousel
+              className="relative"
+              opts={{ align: "start", containScroll: "trimSnaps", loop: true }}
+              setApi={setStackCarouselApi}
+            >
               <CarouselContent className="h-full">
-                {[selectedStack.leader, ...selectedStack.members].map((photo) => (
+                {[selectedStack.leader, ...selectedStack.members].map((photo, index) => (
                   <CarouselItem key={photo.id} className="min-w-full flex-column content-center">
                     <div className="fullscreen-photo-card z-0 mx-auto w-full max-w-[900px] animate-pickup">
                       <div className="fullscreen-photo-frame">
-                        {photo.fullSrc ? (
+                        {photo.fullSrc || photo.src ? (
                           <img
-                            src={photo.fullSrc}
+                            src={index === activeStackPhotoIndex ? photo.fullSrc : photo.src}
                             alt={photo.label}
-                            loading="eager"
+                            loading={index === activeStackPhotoIndex ? "eager" : "lazy"}
                             decoding="async"
                             className="fullscreen-photo-img"
                           />
