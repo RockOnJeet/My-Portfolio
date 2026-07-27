@@ -111,6 +111,7 @@ export const useIntersectionObserver = (options = {}) => {
           if (index) {
             (entry.target as HTMLElement).style.transitionDelay = `${parseInt(index) * 0.15}s`;
           }
+          observer.unobserve(entry.target);
         }
       });
     }, { threshold: 0.1, ...options });
