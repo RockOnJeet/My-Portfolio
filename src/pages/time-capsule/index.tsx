@@ -197,7 +197,7 @@ export default function TimeCapsule() {
       <div className="scanlines" />
 
       <main className="max-w-4xl mx-auto px-6 sm:px-12 relative min-w-0 overflow-visible">
-        <Zone name="INIT_SEQUENCE" className="rounded-[28px] p-8 hero-zone" onPhotoClick={handlePhotoClick}>
+        <Zone name="INIT_SEQUENCE" className="rounded-[28px] p-8 hero-zone" prioritizePhotos onPhotoClick={handlePhotoClick}>
           <Section className="items-start">
             <div className="mt-[-10vh]">
               <div className="hero-command relative font-jb text-glow text-sm sm:text-base md:text-lg mb-8 inline-flex items-center overflow-hidden">
