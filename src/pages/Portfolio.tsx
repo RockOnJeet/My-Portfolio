@@ -12,6 +12,9 @@ import { Section, SectionHeading } from "@/components/layout/Section";
 import { ProjectCard } from "@/components/portfolio/projects/ProjectCard";
 import { SkillCard } from "@/components/portfolio/skills/SkillCard";
 import { StatCard } from "@/components/portfolio/about/StatCard";
+import { HeroBackground } from "@/components/portfolio/hero/HeroBackground";
+import { HeroEditor } from "@/components/portfolio/hero/HeroEditor";
+import { HeroHeadline } from "@/components/portfolio/hero/HeroHeadline";
 import type { ThemedToken } from "shiki";
 
 const SECTION_IDS = ["about", "projects", "skills", "contact", "feedback"];
@@ -625,302 +628,37 @@ function Hero() {
 
   return (
     <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-dark-800 pt-16">
-      {/* Glow background */}
-      <div className="absolute inset-0 pointer-events-none">
-        {/* Central purple glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[600px] rounded-full blur-[120px]" style={{ background: "var(--accent-purple)", opacity: 0.2 }} />
-        {/* Left blue glow */}
-        <div className="absolute top-1/3 left-1/4 w-[400px] h-[400px] rounded-full blur-[100px]" style={{ background: "var(--accent-blue)", opacity: 0.15 }} />
-        {/* Right glow */}
-        <div className="absolute bottom-1/3 right-1/4 w-[350px] h-[350px] rounded-full blur-[100px]" style={{ background: "var(--accent-blue)", opacity: 0.1 }} />
-        {/* Floating blobs — white teardrop shapes like GitHub's homepage */}
-        <div className="absolute top-[28%] left-[20%] w-14 h-14 rounded-full bg-white/80 blur-sm animate-float-1" />
-        <div className="absolute top-[40%] right-[22%] w-20 h-20 rounded-full bg-white/70 blur-sm animate-float-2" />
-        <div className="absolute top-[55%] left-[38%] w-10 h-10 rounded-full bg-white/60 blur-sm animate-float-3" />
-        <div className="absolute top-[22%] right-[35%] w-8 h-8 rounded-full bg-white/50 blur-sm animate-float-2" />
-        {/* Star dots scattered around */}
-        {[...Array(30)].map((_, i) => (
-          <div
-            key={`star-${i}`}
-            className="absolute w-[2px] h-[2px] rounded-full bg-white/40"
-            style={{
-              top: `${10 + Math.sin(i * 137.5) * 40 + 40}%`,
-              left: `${10 + Math.cos(i * 137.5) * 42 + 42}%`,
-            }}
-          />
-        ))}
-      </div>
-
-      {/* Hero text */}
-      <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
-        <div className="relative inline-block pb-10">
-          <h1
-            ref={headingRef}
-            tabIndex={0}
-            onFocus={handleHeadingFocus}
-            onBlur={handleHeadingBlur}
-            className="text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-tight tracking-tight mb-6"
-          >
-            <code className="text-inherit block terminal-font">
-              {typedLines.map((line, i) => {
-                const isLastLine = i === typedLines.length - 1;
-
-                const renderWithMuted = (text: string) => {
-                  const parts = text.split(/(\{[^}]+\})/g);
-                  return parts.map((part, idx) => {
-                    if (part.startsWith("{") && part.endsWith("}")) {
-                      return (
-                        <span key={`muted-${i}-${idx}`} className="text-white/40">
-                          {part.slice(1, -1)}
-                        </span>
-                      );
-                    }
-                    return <span key={`muted-${i}-${idx}`}>{part}</span>;
-                  });
-                };
-
-                return (
-                  <span
-                    key={`typed-${i}`}
-                    className={isLastLine ? "block text-center" : "block"}
-                  >
-                    {isLastLine ? (
-                      <>
-                        <span>{renderWithMuted(line)}</span>
-                        {typedHeadline.length > 0 ? (
-                          <span className="inline-block ml-1 opacity-0 animate-blink-cursor">
-                            _
-                          </span>
-                        ) : null}
-                      </>
-                    ) : (
-                      <span className="inline-block">
-                        {renderWithMuted(line)}
-                      </span>
-                    )}
-                  </span>
-                );
-              })}
-            </code>
-          </h1>
-          <span
-            className={`mt-2 text-xs text-white/40 text-left opacity-0 transition-opacity duration-500 ease-out sm:absolute sm:-right-8 sm:bottom-8 sm:translate-x-4 sm:text-right sm:whitespace-nowrap ${showNote ? "opacity-100" : "opacity-0"
-              }`}
-            style={{ transitionDelay: showNote ? "250ms" : "0ms" }}
-          >
-            {noteLine}
-          </span>
-        </div>
-        <p className="text-lg md:text-xl text-white/60 max-w-2xl mx-auto mb-10 leading-relaxed">
-          {sublineLines.map((line, i) => {
-            const highlightStart = line.indexOf("[");
-            const highlightEnd = line.indexOf("]", highlightStart + 1);
-            if (highlightStart !== -1 && highlightEnd !== -1) {
-              const before = line.slice(0, highlightStart);
-              const highlight = line.slice(highlightStart + 1, highlightEnd);
-              const after = line.slice(highlightEnd + 1);
-
-              return (
-                <span key={`subline-${i}`} className="block">
-                  {before}
-                  <span className="text-accent-blue font-semibold">
-                    {highlight}
-                  </span>
-                  {after}
-                </span>
-              );
-            }
-
-            return (
-              <span key={`subline-${i}`} className="block">
-                {line}
-              </span>
-            );
-          })}
-        </p>
-
-        {/* CTA buttons */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-          <button
-            onClick={() => scrollTo(hero.primaryCta.href)}
-            className="w-full sm:w-auto px-6 py-3 rounded-md text-base font-semibold text-white transition-colors cursor-pointer"
-            style={{ background: "var(--success-500)" }}
-          >
-            {hero.primaryCta.label}
-          </button>
-          <button
-            onClick={() => scrollTo(hero.secondaryCta.href)}
-            className="w-full sm:w-auto px-6 py-3 rounded-md text-base font-semibold border border-white/20 text-white hover:bg-white/10 transition-colors cursor-pointer"
-          >
-            {hero.secondaryCta.label}
-          </button>
-        </div>
-
-        {/* Scroll indicator */}
-        <button
-          onClick={() => scrollTo("#about")}
-          className="mt-16 inline-flex flex-col items-center gap-1 text-white/30 hover:text-white/60 transition-colors text-xs cursor-pointer"
-        >
-          <span>Scroll down</span>
-          <ChevronDown size={16} className="animate-bounce" />
-        </button>
-      </div>
-
-      {/* AI / Human editor toggle */}
-      <div className="relative z-10 w-full max-w-5xl mx-auto px-4 mt-8 pb-0">
-        <div className="rounded-xl overflow-hidden border border-white/10 shadow-2xl">
-          {/* VS Code–style chrome (window controls + tabs) */}
-          <div
-            className={
-              "px-4 py-2.5 flex items-center gap-2 border-b border-white/10 select-none " +
-              (editorExpanded ? "bg-dark-700" : "bg-dark-700 cursor-pointer")
-            }
-            onClick={(event) => {
-              if (!editorExpanded && !(event.target as HTMLElement).closest("button")) {
-                expandEditor();
-              }
-            }}
-            onDoubleClick={(event) => {
-              event.preventDefault();
-              if (editorExpanded) collapseEditor();
-            }}
-          >
-            <div className="flex gap-1.5">
-              <button
-                type="button"
-                onClick={collapseEditor}
-                aria-label="Collapse editor"
-                className="w-3 h-3 rounded-full bg-danger-500 focus:outline-none focus:ring-2 focus:ring-white/50"
-              />
-              <button
-                type="button"
-                aria-label={editorExpanded ? "Collapse editor" : "Expand editor"}
-                onClick={toggleEditor}
-                className="w-3 h-3 rounded-full bg-warning-500 focus:outline-none focus:ring-2 focus:ring-white/50"
-              />
-              <button
-                type="button"
-                aria-label="Green control (no-op)"
-                className="w-3 h-3 rounded-full bg-success-500 focus:outline-none focus:ring-2 focus:ring-white/50"
-              />
-            </div>
-
-            {!editorExpanded ? (
-              <div className="flex-1 text-left text-xs text-white/80">
-                For AI bots... or competent humans.
-              </div>
-            ) : (
-              <div
-                className="relative flex flex-1 items-center gap-1 ml-2 text-xs rounded-t-md px-2 py-1 bg-dark-700"
-                role="tablist"
-                aria-label="Editor tabs"
-                onKeyDown={handleTabListKeyDown}
-              >
-                <div
-                  className="absolute left-0 bottom-0 h-0.5 transition-all duration-200 ease-out"
-                  style={{
-                    width: `${underlineStyle.width}px`,
-                    transform: `translateX(${underlineStyle.left}px)`,
-                    background: 'var(--accent-blue)'
-                  }}
-                />
-                {editorTabs.map((tab, idx) => (
-                  <button
-                    key={tab.id}
-                    ref={(el) => {
-                      tabRefs.current[idx] = el
-                    }}
-                    id={`editor-tab-${tab.id}`}
-                    type="button"
-                    role="tab"
-                    aria-selected={tab.id === activeEditorTab}
-                    aria-controls={`editor-panel-${tab.id}`}
-                    className={
-                      "relative px-3 py-1 rounded-t-md focus:outline-none focus:ring-2 focus:ring-white/50 transition-colors duration-150 cursor-pointer " +
-                      (tab.id === activeEditorTab
-                        ? "text-white"
-                        : "text-white/60 hover:text-white/80")
-                    }
-                    onClick={() => switchEditorTab(tab.id)}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div
-            className="transition-[height,opacity] duration-300 ease-out overflow-hidden max-h-[420px]"
-            style={{
-              height: editorExpanded ? panelHeight : "0px",
-              opacity: editorExpanded ? 1 : 0,
-            }}
-            onTransitionEnd={() => {
-              if (isCollapsing) {
-                setIsCollapsing(false);
-                setEditorExpanded(false);
-                setPanelHeight("0px");
-              }
-            }}
-          >
-            <div
-              ref={panelRef}
-              id={`editor-panel-${activeEditorTab}`}
-              role="tabpanel"
-              aria-labelledby={`editor-tab-${activeEditorTab}`}
-              className="px-6 py-5 font-mono text-sm text-left overflow-x-auto overflow-y-auto max-h-full bg-dark-700"
-            >
-              {highlightError && (
-                <div className="mb-3 text-xs text-amber-400/90">
-                  Syntax highlighting unavailable: {highlightError}
-                </div>
-              )}
-              <div className="flex text-muted-100">
-                {/* Gutter (line numbers) */}
-                <div className="flex-shrink-0 w-12 pr-3 text-right text-white/20 select-none">
-                  {renderedLines.map((_, i) => (
-                    <div key={`line-${i}`} className="leading-5">
-                      {i + 1}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Code (horizontal scroll only) */}
-                <div className="min-w-0 flex-1 overflow-x-auto">
-                  <pre className="whitespace-pre text-muted-100">
-                    {renderedLines.map((lineTokens, i) => (
-                      <div key={`code-line-${i}`} className="leading-5">
-                        {lineTokens.length > 0 ? lineTokens.map((token, tokenIndex) => {
-                          const fontStyle = token.fontStyle ?? 0;
-                          const isItalic = (fontStyle & 1) !== 0;
-                          const isBold = (fontStyle & 2) !== 0;
-                          const isUnderline = (fontStyle & 4) !== 0;
-
-                          return (
-                            <span
-                              key={`${i}-${tokenIndex}`}
-                              style={{
-                                color: token.color ?? "var(--muted-100)",
-                                fontStyle: isItalic ? "italic" : "normal",
-                                fontWeight: isBold ? 700 : 400,
-                                textDecoration: isUnderline ? "underline" : "none",
-                              }}
-                            >
-                              {token.content}
-                            </span>
-                          );
-                        }) : <span />}
-                      </div>
-                    ))}
-                  </pre>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
+      <HeroBackground />
+      <HeroHeadline
+        typedHeadline={typedHeadline}
+        showNote={showNote}
+        headingRef={headingRef}
+        onHeadingFocus={handleHeadingFocus}
+        onHeadingBlur={handleHeadingBlur}
+        onNavigate={scrollTo}
+      />
+      <HeroEditor
+        editorExpanded={editorExpanded}
+        activeEditorTab={activeEditorTab}
+        editorTabs={editorTabs}
+        underlineStyle={underlineStyle}
+        panelHeight={panelHeight}
+        isCollapsing={isCollapsing}
+        highlightError={highlightError}
+        renderedLines={renderedLines}
+        tabRefs={tabRefs}
+        panelRef={panelRef}
+        collapseEditor={collapseEditor}
+        expandEditor={expandEditor}
+        toggleEditor={toggleEditor}
+        switchEditorTab={switchEditorTab}
+        handleTabListKeyDown={handleTabListKeyDown}
+        finishCollapse={() => {
+          setIsCollapsing(false);
+          setEditorExpanded(false);
+          setPanelHeight("0px");
+        }}
+      />    </section>
   );
 }
 
