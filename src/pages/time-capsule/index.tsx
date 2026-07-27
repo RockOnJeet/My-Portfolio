@@ -180,20 +180,12 @@ export default function TimeCapsule() {
 
   useEffect(() => {
     videoRefs.current.forEach((video, index) => {
-      if (!video) {
+      if (!video || index === activeVideoIndex) {
         return;
       }
 
-      if (index === activeVideoIndex) {
-        if (video.paused) {
-          void video.play().catch(() => {
-            /* Ignore autoplay block */
-          });
-        }
-      } else {
-        if (!video.paused) {
-          video.pause();
-        }
+      if (!video.paused) {
+        video.pause();
       }
     });
   }, [activeVideoIndex, videos.length]);
