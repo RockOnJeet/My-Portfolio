@@ -846,6 +846,8 @@ export default function Spotify() {
                   artist: playbackArtist,
                   duration: playbackDurationMs ? formatTime(playbackDurationMs) : "--:--",
                   current: true,
+                  imageUrl: null,
+                  trackUrl: null,
                 }}
                 imageDataUrl={trackImageDataUrl}
               />

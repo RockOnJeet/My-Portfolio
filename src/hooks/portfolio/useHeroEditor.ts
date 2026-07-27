@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import type { ThemedToken } from "shiki";
 import { hero } from "@/data/config";
-import { isSupportedEditorLanguage, tokenizeForEditor } from "@/lib/syntaxHighlight";
+
+const SUPPORTED_EDITOR_LANGUAGES = new Set(["py", "python", "c", "cpp", "h", "hpp", "xml", "json", "ts", "tsx", "typescript"]);
 
 const MAX_EDITOR_PANEL_HEIGHT = 420;
 const getPanelHeight = (height: number) => `${Math.min(height, MAX_EDITOR_PANEL_HEIGHT)}px`;
@@ -84,13 +85,14 @@ export function useHeroEditor() {
 
   useEffect(() => {
     let canceled = false;
-    if (!editorExpanded || !isSupportedEditorLanguage(activeLanguage)) {
+    if (!editorExpanded || !SUPPORTED_EDITOR_LANGUAGES.has(activeLanguage)) {
       setTokenizedLines(null);
       setHighlightError(null);
       return () => { canceled = true; };
     }
     setHighlightError(null);
-    tokenizeForEditor(activeCode, activeLanguage)
+    import("@/lib/syntaxHighlight")
+      .then(({ tokenizeForEditor }) => tokenizeForEditor(activeCode, activeLanguage))
       .then((tokens) => { if (!canceled) setTokenizedLines(tokens); })
       .catch((error) => {
         if (!canceled) {

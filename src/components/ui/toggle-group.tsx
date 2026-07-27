@@ -14,34 +14,43 @@ const ToggleGroupContext = React.createContext<
   variant: "default",
 })
 
+type ToggleGroupProps = (ToggleGroupPrimitive.ToggleGroupSingleProps | ToggleGroupPrimitive.ToggleGroupMultipleProps) &
+  VariantProps<typeof toggleVariants>
+
 const ToggleGroup = React.forwardRef<
   React.ElementRef<typeof ToggleGroupPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof ToggleGroupPrimitive.Root> &
-    VariantProps<typeof toggleVariants>
->(({ className, variant, size, children, ...props }, ref) => (
-  <ToggleGroupPrimitive.Root
-    ref={ref}
-    className={cn("flex items-center justify-center gap-1", className)}
-    {...props}
-  >
-    <ToggleGroupContext.Provider value={{ variant, size }}>
-      {children}
-    </ToggleGroupContext.Provider>
-  </ToggleGroupPrimitive.Root>
-))
+  ToggleGroupProps
+>(({ className, variant, size, children, ...props }, ref) => {
+  const rootProps = props as ToggleGroupPrimitive.ToggleGroupSingleProps | ToggleGroupPrimitive.ToggleGroupMultipleProps
+
+  return (
+    <ToggleGroupPrimitive.Root
+      ref={ref}
+      className={cn("flex items-center justify-center gap-1", className)}
+      {...rootProps}
+    >
+      <ToggleGroupContext.Provider value={{ variant, size }}>
+        {children}
+      </ToggleGroupContext.Provider>
+    </ToggleGroupPrimitive.Root>
+  )
+})
 
 ToggleGroup.displayName = ToggleGroupPrimitive.Root.displayName
 
+type ToggleGroupItemProps = React.ComponentPropsWithoutRef<typeof ToggleGroupPrimitive.Item> &
+  VariantProps<typeof toggleVariants>
+
 const ToggleGroupItem = React.forwardRef<
   React.ElementRef<typeof ToggleGroupPrimitive.Item>,
-  React.ComponentPropsWithoutRef<typeof ToggleGroupPrimitive.Item> &
-    VariantProps<typeof toggleVariants>
->(({ className, children, variant, size, ...props }, ref) => {
+  ToggleGroupItemProps
+>(({ className, children, variant, size, value, ...props }, ref) => {
   const context = React.useContext(ToggleGroupContext)
 
   return (
     <ToggleGroupPrimitive.Item
       ref={ref}
+      value={value}
       className={cn(
         toggleVariants({
           variant: context.variant || variant,
