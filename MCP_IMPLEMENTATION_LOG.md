@@ -140,8 +140,8 @@ Canonical public endpoints currently are:
 /mcp
 /.well-known/oauth-protected-resource/mcp
 /.well-known/oauth-authorization-server
-/oauth/authorize       (advertised; implementation deferred to 3C5)
-/oauth/token           (advertised; implementation deferred to 3C5)
+/oauth/authorize       (3C5A implementation in progress)
+/oauth/token           (advertised; implementation deferred to 3C5B)
 ```
 
 The SDK's metadata helper derives the protected-resource well-known path from the `/mcp` resource URL. The Authorization Server issuer is the request origin.
