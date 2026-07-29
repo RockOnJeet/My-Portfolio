@@ -5,116 +5,151 @@ This file tracks implementation work and architectural decisions for the MCP ser
 ## Baseline
 
 - Working branch: `test/mcp`.
-- Local implementation intentionally starts from commit `b15e167` rather than the nine discarded upstream `test/mcp` commits.
+- Local implementation intentionally starts from commit `b15e167` rather than the discarded upstream `test/mcp` implementation.
 - Existing application architecture uses Cloudflare Pages Functions under `functions/` with backend logic under `src/backend/`.
 - MCP implementation lives under `src/backend/mcp/`, with the HTTP request boundary under `functions/mcp.ts`.
+- The Pages project is dashboard-configured rather than Wrangler-configured. Cloudflare Pages `Secrets and Variables` are already available to Functions and are used elsewhere in the project.
 
 ## Current Architecture
 
 ```text
-Cloudflare Pages /mcp request
-        |
-        v
-functions/mcp.ts
-        |
-        v
-createMcpHandler()
-        |
-        v
-createMcpServer()
-        |
-        v
-loadMcpConfig()
-        |
-        v
-registerEnabledCapabilities(config)
-        |
-        v
-Capability factories receive loaded config
-        |
-        v
-Individual capability modules register MCP tools
+GitHub OAuth App
+       |
+       | upstream identity proof only
+       v
+Application auth layer
+       |
+       +---- future browser session -> /admin
+       |
+       `---- future MCP Authorization Server
+                     |
+                     v
+Cloudflare Pages /mcp Resource Server
+       |
+       v
+loadMcpConfig() -> authMode dispatch
+       |
+       v
+MCP handler -> server factory -> capability registry
 ```
 
-Configuration is intentionally file-backed for now. Runtime-managed configuration will be introduced later with Wrangler/Cloudflare infrastructure. Migration seams must be marked with `TODO(wrangler)`.
+MCP behavioral configuration is intentionally file-backed for now. Runtime-managed behavioral configuration will be introduced later with Wrangler/Cloudflare infrastructure. Migration seams must be marked with `TODO(wrangler)`.
+
+Deployment-specific secrets/variables are separate from MCP behavioral configuration and may use the existing Cloudflare Pages `env` bindings immediately.
 
 ## Completed Work
 
 ### Phase 1 - Data model and configuration surface
 
-- Added `src/backend/mcp/types.ts`.
-- Added `McpServerConfig` with server name, version, description, auth mode, supported scopes, and enabled capability IDs.
-- Added capability metadata types.
-- Added `src/backend/mcp/config/defaults.ts` as the current file-backed configuration source.
-- Added `src/backend/mcp/config/index.ts` with `loadMcpConfig()` and a future runtime-provider seam.
-- Marked the runtime provider boundary with `TODO(wrangler)`.
+- Added `McpServerConfig` with server identity, auth mode, supported scopes, and enabled capabilities.
+- Added the current file-backed defaults and `loadMcpConfig()` provider seam.
 - Added the canonical capability registry.
 
 ### Phase 2 - MCP v2 foundation
 
-- Initially evaluated `@modelcontextprotocol/sdk` v1, then removed it before building server logic.
-- Audited the workspace for MCP SDK v2 compatibility.
-- Confirmed the project uses ESM, TypeScript bundler resolution, a compatible Node development environment, and no existing source-level Zod API usage.
-- Migrated dependencies to `@modelcontextprotocol/server@2.0.0` and Zod 4.
-- Current installed Zod version after migration: `4.4.3`.
-- Added `version: "1.0.0"` to the file-backed MCP server identity.
-- Added executable `McpCapability` contract with `register(server: McpServer)`.
-- Added configuration-aware `McpCapabilityFactory` contract so capabilities can consume the already-loaded configuration without importing file defaults directly.
-- Added `registerEnabledCapabilities()` orchestration.
-- Capability registration rejects duplicate configured IDs, unknown IDs, and registry-key/definition-ID mismatches.
-- Added `src/backend/mcp/server.ts` with a fresh-server factory using `loadMcpConfig()` and `registerEnabledCapabilities()`.
-- The server factory accepts the future configuration-provider seam while remaining file-backed when called normally.
-
-### Phase 2B - First capability
-
-- Added `src/backend/mcp/capabilities/server-info.ts`.
-- Added the deterministic, read-only `server_info` MCP tool.
-- `server_info` returns the loaded server name, version, and description as both text content and structured content.
-- Tool input and output use the MCP v2 Standard Schema-compatible Zod 4 object form.
-- Added `server_info` to the canonical capability registry.
-- Enabled `server_info` through `DEFAULT_MCP_CONFIG.enabledCapabilities`.
-- The capability receives loaded configuration through its factory rather than importing `DEFAULT_MCP_CONFIG`, preserving the future runtime-config boundary.
+- Removed MCP SDK v1 and migrated to `@modelcontextprotocol/server@2.0.0` with Zod 4.
+- Added configuration-aware capability contracts, registry orchestration, and fresh MCP server construction.
+- Added the deterministic read-only `server_info` capability.
 
 ### Phase 3A - Cloudflare HTTP boundary
 
-- Added `functions/mcp.ts`, exposing the MCP server at the Cloudflare Pages `/mcp` route.
-- Uses MCP v2 `createMcpHandler()` and delegates each request to its Web-standard `fetch()` interface.
-- The handler factory uses `createMcpServer()`, preserving fresh server construction and the existing config/capability pipeline.
-- Kept the SDK's default stateless legacy compatibility posture for now.
-- Authentication is intentionally absent from this boundary so Cloudflare/MCP transport compatibility can be validated independently before auth routing and OAuth are introduced.
-- This phase is a commit + deploy checkpoint because local Vite builds do not execute or bundle Cloudflare Pages Functions.
+- Added `functions/mcp.ts` using MCP v2 `createMcpHandler()` and Web-standard `fetch()`.
+- Test deployment validated Streamable HTTP initialization, server identity, `tools/list`, `server_info`, and route ownership.
+
+### Phase 3B - Explicit auth-mode boundary
+
+- Current file-backed default is `authMode: "none"`, matching deployed behavior.
+- `none` forwards to MCP; `oauth` fails closed with HTTP 503 until implemented.
+- Configuration is loaded once per request and passed into server construction.
+- MCP SDK server identity receives configured name, version, and description.
+
+### Superseded Phase 3C1 - Cloudflare Access exploration
+
+- Cloudflare Access was evaluated as a shared authentication layer for `/admin` and `/mcp`.
+- The direction was superseded before integration/deployment after clarifying that the application should own authorization and MCP OAuth.
+- Cleanup completed: all temporary Access-specific source modules and the `@cloudflare/pages-plugin-cloudflare-access` dependency were removed.
+
+### Phase 3C2 - GitHub upstream identity foundation
+
+- Chose a GitHub OAuth App intentionally rather than a GitHub App: this application only needs upstream human identity, not GitHub installation/repository semantics.
+- Added provider-neutral `ApplicationIdentity` with GitHub provider, immutable numeric subject, and informational login.
+- Added typed GitHub OAuth deployment configuration for `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_OWNER_ID`, and `AUTH_COOKIE_SECRET`.
+- Added `/oauth/github/login` to create a cryptographically random OAuth state, bind it to an HMAC-signed HttpOnly/Secure/SameSite=Lax cookie, and redirect to GitHub.
+- Added `/oauth/github/callback` to validate state, exchange the authorization code server-side, query the authenticated GitHub user, and authorize only the configured immutable numeric owner ID.
+- GitHub OAuth requests intentionally request no additional scope; public identity is sufficient for the owner check.
+- The temporary successful callback response contains only safe application identity fields. GitHub access tokens are never returned to the browser or MCP client.
+- `/mcp` remains `authMode: "none"`; this identity foundation does not alter the proven MCP path.
 
 ## Architectural Decisions
 
-### MCP SDK
+### MCP SDK and OAuth responsibility
 
-Use MCP TypeScript SDK v2 through `@modelcontextprotocol/server`. Do not build new MCP code against the removed v1 `@modelcontextprotocol/sdk` package.
+Use MCP TypeScript SDK v2 through `@modelcontextprotocol/server`. MCP v2 remains the Resource Server implementation. Do not restore the frozen v1-style Authorization Server helpers for new OAuth code.
 
-### Server lifecycle
+The application owns authentication state, authorization policy, MCP OAuth behavior, sessions/tokens, scopes, and capability authorization. Infrastructure does not become the authorization control plane.
 
-Follow the v2 server-factory architecture: create/configure an `McpServer`, register enabled capabilities, and expose it through the v2 HTTP handler. Do not create a global persistent MCP server unless a later requirement specifically justifies it.
+### GitHub OAuth App as upstream IdP
 
-### Capability ownership
+GitHub proves human identity only. The application authorizes the returned immutable numeric GitHub user ID against `GITHUB_OWNER_ID`.
 
-Each capability module owns its MCP-facing schema, handler, and call to the SDK registration API. The central registry maps internal capability IDs to capability factories and controls which modules are enabled.
+The GitHub access token is backend-only and exists only to retrieve the authenticated GitHub identity. It must never become an MCP bearer token or be exposed to the browser.
 
-Capability factories receive the already-loaded `McpServerConfig`; capability modules must not import file-backed defaults to obtain runtime behavior.
+GitHub OAuth scopes and future MCP scopes are separate namespaces.
 
-Internal capability IDs and public MCP tool names are separate concepts.
+### Future identity-provider flexibility
 
-### Authentication boundary
+Keep upstream identity verification behind an application-owned boundary. MCP capabilities and admin authorization must not depend directly on GitHub token semantics. Another upstream IdP can later be added/replaced without redesigning the MCP Resource Server.
 
-OAuth and no-auth switching belong at the HTTP/request boundary, not inside capability implementations. Capability metadata may declare required scopes, but bearer-token mechanics must not leak into tool modules.
+### Shared admin + MCP authentication
 
-Phase 3A deliberately exposes the transport without authentication. This is temporary and exists to isolate runtime/transport validation before Phase 3B makes auth-mode routing explicit.
+The future admin portal and MCP OAuth authorization UI should share the same application identity/session foundation where practical:
+
+```text
+GitHub login
+    |
+    v
+application identity/session
+    |
+    +---- /admin authorization
+    |
+    `---- MCP authorization/consent
+             |
+             v
+       application-issued MCP token
+```
+
+### OAuth transaction state
+
+The GitHub identity bootstrap uses a short-lived signed browser cookie for OAuth `state`, avoiding persistence solely for the upstream login handshake. Durable application sessions and MCP authorization transactions are separate concerns and may require runtime storage.
+
+### Deployment configuration
+
+MCP behavioral settings remain file-backed until the planned runtime-config/admin migration.
+
+Phase 3C2 deployment requires these Cloudflare Pages Variables and Secrets:
+
+```text
+GITHUB_CLIENT_ID=<GitHub OAuth App client ID>
+GITHUB_CLIENT_SECRET=<secret>
+GITHUB_OWNER_ID=<immutable numeric GitHub user ID>
+AUTH_COOKIE_SECRET=<high-entropy secret>
+```
+
+`GITHUB_CLIENT_SECRET` and `AUTH_COOKIE_SECRET` must be Secrets. Client ID and owner ID may be ordinary Variables.
+
+The GitHub OAuth App authorization callback for the test deployment is:
+
+```text
+https://test-mcp.rockonjeet.pages.dev/oauth/github/callback
+```
 
 ### Configuration storage
 
-Keep configuration in files for the current implementation. Do not introduce KV, D1, or other Wrangler-managed persistence yet. Mark future runtime-storage migration points with `TODO(wrangler)`.
+Do not introduce KV, D1, or other Wrangler-managed persistence for MCP behavioral configuration yet. OAuth/session persistence may independently require Cloudflare storage and will be selected based on those requirements.
 
 ## Verification History
 
-Each implemented code batch has been followed by workspace diagnostics and the repository typecheck.
+Each implemented code batch is followed by workspace diagnostics and repository typecheck/build validation.
 
 Current verification commands:
 
@@ -123,16 +158,18 @@ npm run typecheck -- --pretty false
 npm run build
 ```
 
-Latest Phase 3A result: diagnostics clean; TypeScript typecheck passes; Vite production build passes with only the repository's existing large-chunk warning.
-
 ## Deferred Work
 
-- Implement explicit OAuth/no-auth request-boundary switching.
-- Implement OAuth protected-resource metadata and scope enforcement.
-- Add additional real capabilities/tools as required.
-- Port file-backed configuration to runtime-managed storage through Wrangler when requested.
-- Add/administer the future admin-console configuration surface.
+- Establish durable application sessions reusable by `/admin` and MCP authorization.
+- Select persistence for sessions/OAuth grants/authorization transactions as needed.
+- Implement MCP protected-resource and Authorization Server metadata.
+- Implement MCP Authorization Code + PKCE flow and application token issuance.
+- Switch `/mcp` to Resource Server bearer-token enforcement.
+- Connect MCP scopes to capability authorization.
+- Add additional capabilities.
+- Port file-backed MCP behavioral configuration to runtime-managed storage through Wrangler when requested.
+- Add the future admin-console configuration surface.
 
 ## Next Step
 
-Commit and deploy Phase 3A, then validate the deployed `/mcp` route, MCP initialization, `tools/list`, and `server_info` invocation. Once transport/runtime behavior is proven, implement explicit no-auth mode routing as Phase 3B before adding OAuth.
+Commit/deploy Phase 3C2 independently. Configure the GitHub OAuth App and Pages environment variables, then validate `/oauth/github/login` -> GitHub -> `/oauth/github/callback`. A successful callback must report only the safe application identity and `authorized: true`. Keep `/mcp` in `none` mode throughout this checkpoint.

@@ -9,7 +9,7 @@ export const DEFAULT_MCP_CONFIG: Readonly<McpServerConfig> = {
   name: "RockOnJeet MCP",
   version: "1.0.0",
   description: "MCP server for RockOnJeet services and capabilities.",
-  authMode: "oauth",
+  authMode: "none",
   supportedScopes: [],
   enabledCapabilities: ["server_info"],
 };
