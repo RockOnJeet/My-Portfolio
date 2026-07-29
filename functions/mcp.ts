@@ -7,7 +7,9 @@ import { createMcpServerFromConfig } from "../src/backend/mcp/server";
 import type { McpServerConfig } from "../src/backend/mcp/types";
 
 function createHandler(config: Readonly<McpServerConfig>) {
-  return createMcpHandler(() => createMcpServerFromConfig(config));
+  return createMcpHandler((context) =>
+    createMcpServerFromConfig(config, context.authInfo ? new Set(context.authInfo.scopes) : undefined),
+  );
 }
 
 function unauthorized(request: Request): Response {
@@ -46,10 +48,6 @@ export async function onRequest({ request, env }: { request: Request; env: AuthD
   if (config.authMode === "none") return handler.fetch(request);
 
   const authInfo = await resolveAuthInfo(request, env);
-  console.info("MCP bearer authentication", {
-    authorizationHeaderPresent: request.headers.has("Authorization"),
-    bearerTokenAccepted: authInfo !== null,
-  });
   if (!authInfo) return unauthorized(request);
   return handler.fetch(request, { authInfo });
 }

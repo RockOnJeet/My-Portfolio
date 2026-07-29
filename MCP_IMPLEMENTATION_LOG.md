@@ -94,10 +94,30 @@ Deployment-specific secrets/variables and auth persistence are separate from MCP
 - Added `/.well-known/oauth-protected-resource/mcp` for the `/mcp` Resource Server.
 - Added `/.well-known/oauth-authorization-server` for the application-owned Authorization Server.
 - Metadata derives MCP resource name and supported scopes from loaded MCP configuration.
-- Authorization Server metadata currently advertises only behavior planned for the next implementation stage: Authorization Code, PKCE S256, public-client token authentication (`none`), and configured MCP scopes.
-- No registration endpoint or Client ID Metadata Document support is advertised yet; client-registration behavior will be added only when implemented.
-- `/mcp` remains in `authMode: "none"`; discovery does not yet imply bearer-token enforcement.
+- Authorization Server metadata advertises the implemented Authorization Code flow, PKCE S256, public-client token authentication (`none`), configured MCP scopes, and CIMD support.
+- Client Identifier Metadata Document (CIMD) support is advertised and implemented for public MCP OAuth clients; no Dynamic Client Registration endpoint is advertised.
+- `/mcp` now runs in `authMode: "oauth"`; bearer-token validation is enforced before MCP dispatch.
 
+### Phase 3C5 - Authorization Code + PKCE and scoped MCP access
+
+- Added application-owned Authorization Code + PKCE S256 flow backed by D1 authorization transactions, one-time authorization codes, and opaque access tokens.
+- Added client metadata resolution and redirect-URI validation for MCP OAuth clients.
+- Added bearer-token enforcement at `/mcp`, including token expiry/resource validation and SDK `AuthInfo` propagation.
+- OAuth authorization requests reject scopes outside `McpServerConfig.supportedScopes`; issued access tokens retain the normalized granted scope set.
+- MCP server construction now receives the authenticated request's granted scopes. Enabled capabilities are registered only when every `requiredScopes` entry is granted.
+- Capability registration fails closed when a capability declares a scope absent from `supportedScopes`, preventing configuration drift from silently creating an invalid authorization contract.
+- Capabilities with no required scopes remain available to any successfully authenticated MCP client. `server_info` is currently the only capability and intentionally remains scope-free.
+- Temporary OAuth/CIMD/bearer diagnostic logging and diagnostic response detail used during interoperability debugging were removed after validation.
+
+
+### Phase 3C6 - Client authorization lifecycle and manual revocation
+
+- Added persistent D1 `oauth_client_grants` records keyed by immutable OAuth `client_id` + owner subject + MCP resource. Human-readable client metadata is retained only as display information.
+- Authorization consent creates or reactivates the client's grant and authorization codes/access tokens carry the grant identity.
+- Existing access tokens are backfilled into grants by the `0004_oauth_client_grants.sql` migration; pre-migration short-lived authorization codes are intentionally invalidated because they cannot be safely associated with a grant.
+- Bearer-token validation now joins the token to its grant and fails closed for revoked grants.
+- Added owner-session-protected `GET /oauth/grants` to enumerate client authorizations and `POST /oauth/grants` to revoke one grant by `grant_id`.
+- Grant revocation marks the authorization revoked and deletes all outstanding authorization codes and access tokens for that grant. A later explicit consent can reactivate the client without reviving previously revoked credentials.
 ## Architectural Decisions
 
 ### MCP SDK and OAuth responsibility
@@ -140,8 +160,9 @@ Canonical public endpoints currently are:
 /mcp
 /.well-known/oauth-protected-resource/mcp
 /.well-known/oauth-authorization-server
-/oauth/authorize       (3C5A implementation in progress)
-/oauth/token           (advertised; implementation deferred to 3C5B)
+/oauth/authorize
+/oauth/token
+/oauth/grants          (owner-session-protected client grant listing/revocation)
 ```
 
 The SDK's metadata helper derives the protected-resource well-known path from the `/mcp` resource URL. The Authorization Server issuer is the request origin.
@@ -194,18 +215,16 @@ npm run build
 
 Phase 3C2 and 3C3 have additionally passed their respective test-deployment checkpoints.
 
+Phase 3C4/3C5 deployment interoperability has been validated with ChatGPT/MCPJam: OAuth discovery, CIMD client identification, owner consent, Authorization Code + PKCE exchange, bearer authentication, MCP initialization, and `tools/list`/`server_info` all succeeded.
+
 ## Deferred Work
 
-- Deploy/validate Phase 3C4 discovery documents.
-- Authorization Code + PKCE token exchange and D1-backed MCP bearer-token issuance implemented; deployment validation pending.
-- Decide/implement the client-identification/registration mechanism required by target MCP clients; do not advertise unsupported registration metadata.
-- `/mcp` bearer-token enforcement implemented; deployment validation pending.
-- Connect MCP scopes to capability authorization.
+- Deploy/apply `migrations/auth/0004_oauth_client_grants.sql` and validate Phase 3C6 grant grouping/revocation against real MCP clients.
+- Add additional capabilities and exercise positive/negative scope filtering with at least one scoped capability.
 - Remove temporary `/oauth/session` once `/admin` consumes application sessions.
-- Add additional capabilities.
 - Port file-backed MCP behavioral configuration to runtime-managed storage through Wrangler when requested.
-- Add the future admin-console configuration surface.
+- Add the future admin-console configuration surface, consuming the grant listing/revocation API for client access management.
 
 ## Next Step
 
-Apply `migrations/auth/0003_oauth_access_tokens.sql` to AUTH_DB, then commit/deploy the token-exchange + bearer-auth checkpoint. Reconnect ChatGPT and verify authorization completes, `/oauth/token` returns 200, and the subsequent authenticated `/mcp` request is accepted.
+Audit the complete Phase 3C5/3C6 working-tree diff, apply `migrations/auth/0004_oauth_client_grants.sql` to `AUTH_DB`, then commit/deploy. Validate that existing deployed client access survives migration, new authorization is grouped under one client grant, revoking that grant immediately makes all of its bearer tokens fail with 401, and a fresh explicit authorization succeeds without reviving old credentials.

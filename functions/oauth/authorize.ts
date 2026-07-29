@@ -35,13 +35,8 @@ export async function onRequestGet({ request, env }: { request: Request; env: Au
   let client;
   try {
     client = await resolveClientMetadata(clientId);
-  } catch (cause) {
-    // TODO(auth-cleanup): Remove test-only CIMD diagnostic detail after interoperability is validated.
-    const diagnostic = cause instanceof Error ? cause.message : "Unknown CIMD validation failure.";
-    console.error("CIMD validation failed", { clientId, diagnostic });
-    return Response.json({ error: "invalid_request", error_description: "Unable to validate client metadata.", diagnostic }, {
-      status: 400, headers: { "Cache-Control": "no-store" },
-    });
+  } catch {
+    return error("Unable to validate client metadata.");
   }
   if (!client.redirectUris.includes(redirectUri)) return error("redirect_uri is not registered by the client metadata document.");
 

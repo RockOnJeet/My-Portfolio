@@ -16,6 +16,7 @@ export const MCP_CAPABILITY_REGISTRY: McpCapabilityRegistry = {
 export function registerEnabledCapabilities(
   server: McpServer,
   config: Readonly<McpServerConfig>,
+  grantedScopes?: ReadonlySet<string>,
   registry: McpCapabilityRegistry = MCP_CAPABILITY_REGISTRY,
 ): void {
   const seenCapabilityIds = new Set<string>();
@@ -36,6 +37,17 @@ export function registerEnabledCapabilities(
       throw new Error(
         `MCP capability registry key "${capabilityId}" does not match definition id "${capability.definition.id}"`,
       );
+    }
+
+    const unsupportedScope = capability.definition.requiredScopes.find(
+      (scope) => !config.supportedScopes.includes(scope),
+    );
+    if (unsupportedScope) {
+      throw new Error(`MCP capability "${capabilityId}" requires unsupported scope "${unsupportedScope}"`);
+    }
+
+    if (grantedScopes && capability.definition.requiredScopes.some((scope) => !grantedScopes.has(scope))) {
+      continue;
     }
 
     capability.register(server);

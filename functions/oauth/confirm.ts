@@ -45,7 +45,8 @@ export async function onRequestPost({ request, env }: { request: Request; env: A
     return Response.redirect(redirect, 302);
   }
 
-  const code = await store.createAuthorizationCode(transaction, session.identity.subject);
+  const grant = await store.authorizeClient(transaction, session.identity.subject);
+  const code = await store.createAuthorizationCode(transaction, session.identity.subject, grant.grantId);
   redirect.searchParams.set("code", code);
   return Response.redirect(redirect, 302);
 }
