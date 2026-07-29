@@ -16,9 +16,7 @@ interface GitHubUserResponse {
   login: string;
 }
 
-interface GitHubErrorResponse {
-  message?: string;
-}
+
 
 export function createGitHubAuthorizationUrl(config: GitHubOAuthConfig, state: string): string {
   const url = new URL(GITHUB_AUTHORIZE_URL);
@@ -67,20 +65,7 @@ export async function getGitHubIdentity(accessToken: string): Promise<Applicatio
   });
 
   if (!response.ok) {
-    // TODO(auth-cleanup): Reduce this deployment diagnostic once GitHub identity lookup is validated end-to-end.
-    const payload = (await response.json().catch(() => ({}))) as GitHubErrorResponse;
-    const details = [
-      `HTTP ${response.status}`,
-      payload.message && `message=${payload.message}`,
-      response.headers.get("X-GitHub-Request-Id") &&
-        `request_id=${response.headers.get("X-GitHub-Request-Id")}`,
-      response.headers.get("X-OAuth-Scopes") !== null &&
-        `oauth_scopes=${response.headers.get("X-OAuth-Scopes") || "(none)"}`,
-      response.headers.get("X-RateLimit-Remaining") &&
-        `rate_remaining=${response.headers.get("X-RateLimit-Remaining")}`,
-    ].filter(Boolean);
-
-    throw new Error(`GitHub user lookup failed: ${details.join(", ")}.`);
+    throw new Error(`GitHub user lookup failed with HTTP ${response.status}.`);
   }
 
   const user = (await response.json()) as GitHubUserResponse;
