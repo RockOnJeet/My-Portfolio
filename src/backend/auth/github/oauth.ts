@@ -16,6 +16,10 @@ interface GitHubUserResponse {
   login: string;
 }
 
+interface GitHubErrorResponse {
+  message?: string;
+}
+
 export function createGitHubAuthorizationUrl(config: GitHubOAuthConfig, state: string): string {
   const url = new URL(GITHUB_AUTHORIZE_URL);
   url.searchParams.set("client_id", config.clientId);
@@ -58,11 +62,25 @@ export async function getGitHubIdentity(accessToken: string): Promise<Applicatio
       Accept: "application/vnd.github+json",
       Authorization: `Bearer ${accessToken}`,
       "X-GitHub-Api-Version": "2026-03-10",
+      "User-Agent": "RockOnJeet-Portfolio-Auth",
     },
   });
 
   if (!response.ok) {
-    throw new Error(`GitHub user lookup failed with HTTP ${response.status}.`);
+    // TODO(auth-cleanup): Reduce this deployment diagnostic once GitHub identity lookup is validated end-to-end.
+    const payload = (await response.json().catch(() => ({}))) as GitHubErrorResponse;
+    const details = [
+      `HTTP ${response.status}`,
+      payload.message && `message=${payload.message}`,
+      response.headers.get("X-GitHub-Request-Id") &&
+        `request_id=${response.headers.get("X-GitHub-Request-Id")}`,
+      response.headers.get("X-OAuth-Scopes") !== null &&
+        `oauth_scopes=${response.headers.get("X-OAuth-Scopes") || "(none)"}`,
+      response.headers.get("X-RateLimit-Remaining") &&
+        `rate_remaining=${response.headers.get("X-RateLimit-Remaining")}`,
+    ].filter(Boolean);
+
+    throw new Error(`GitHub user lookup failed: ${details.join(", ")}.`);
   }
 
   const user = (await response.json()) as GitHubUserResponse;
