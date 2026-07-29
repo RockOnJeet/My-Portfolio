@@ -31,24 +31,34 @@ export async function onRequestPost({ request, env }: { request: Request; env: A
   const clientId = form.get("client_id");
   const redirectUri = form.get("redirect_uri");
   const codeVerifier = form.get("code_verifier");
-  if (grantType !== "authorization_code") return oauthError("unsupported_grant_type", "Only authorization_code is supported.");
+  if (grantType !== "authorization_code") {
+    console.warn("OAuth token exchange rejected", { outcome: "unsupported_grant_type" });
+    return oauthError("unsupported_grant_type", "Only authorization_code is supported.");
+  }
   if ([code, clientId, redirectUri, codeVerifier].some((value) => typeof value !== "string" || !value)) {
+    console.warn("OAuth token exchange rejected", { outcome: "invalid_request", reason: "missing_required_parameter" });
     return oauthError("invalid_request", "code, client_id, redirect_uri, and code_verifier are required.");
   }
 
   const store = new OAuthAuthorizationStore(env.AUTH_DB);
   const authorizationCode = await store.consumeAuthorizationCode(code as string);
-  if (!authorizationCode) return oauthError("invalid_grant", "Authorization code is invalid or expired.");
+  if (!authorizationCode) {
+    console.warn("OAuth token exchange rejected", { outcome: "invalid_grant", reason: "authorization_code_missing_or_expired" });
+    return oauthError("invalid_grant", "Authorization code is invalid or expired.");
+  }
 
   // The code is deliberately consumed before validation: a failed exchange cannot replay the grant.
   if (authorizationCode.clientId !== clientId || authorizationCode.redirectUri !== redirectUri) {
+    console.warn("OAuth token exchange rejected", { outcome: "invalid_grant", reason: "client_or_redirect_mismatch" });
     return oauthError("invalid_grant", "Authorization code is not valid for this client or redirect URI.");
   }
   if (await pkceS256(codeVerifier as string) !== authorizationCode.codeChallenge) {
+    console.warn("OAuth token exchange rejected", { outcome: "invalid_grant", reason: "pkce_verification_failed" });
     return oauthError("invalid_grant", "PKCE verification failed.");
   }
 
   const { token } = await store.createAccessToken(authorizationCode);
+  console.info("OAuth token exchange succeeded", { outcome: "success", scopePresent: authorizationCode.scope.length > 0 });
   return Response.json({
     access_token: token,
     token_type: "Bearer",

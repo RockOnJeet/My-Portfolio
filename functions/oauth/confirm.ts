@@ -38,6 +38,7 @@ export async function onRequestPost({ request, env }: { request: Request; env: A
   if (!transaction) return new Response("Authorization transaction is invalid or expired.", { status: 400 });
   const redirect = new URL(transaction.redirectUri);
   if (transaction.state) redirect.searchParams.set("state", transaction.state);
+  redirect.searchParams.set("iss", new URL(request.url).origin);
 
   if (decision === "deny") {
     redirect.searchParams.set("error", "access_denied");
