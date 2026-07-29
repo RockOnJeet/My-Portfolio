@@ -197,9 +197,9 @@ Phase 3C2 and 3C3 have additionally passed their respective test-deployment chec
 ## Deferred Work
 
 - Deploy/validate Phase 3C4 discovery documents.
-- Implement MCP Authorization Code + PKCE flow and application token issuance.
+- Authorization Code + PKCE token exchange and D1-backed MCP bearer-token issuance implemented; deployment validation pending.
 - Decide/implement the client-identification/registration mechanism required by target MCP clients; do not advertise unsupported registration metadata.
-- Switch `/mcp` to Resource Server bearer-token enforcement.
+- `/mcp` bearer-token enforcement implemented; deployment validation pending.
 - Connect MCP scopes to capability authorization.
 - Remove temporary `/oauth/session` once `/admin` consumes application sessions.
 - Add additional capabilities.
@@ -208,4 +208,4 @@ Phase 3C2 and 3C3 have additionally passed their respective test-deployment chec
 
 ## Next Step
 
-Commit/deploy Phase 3C4 independently and inspect both OAuth discovery documents. They should identify `/mcp` as the protected resource, this application origin as the Authorization Server issuer, and advertise only Authorization Code + PKCE S256 with no unsupported registration endpoint. `/mcp` remains unauthenticated during this checkpoint.
+Apply `migrations/auth/0003_oauth_access_tokens.sql` to AUTH_DB, then commit/deploy the token-exchange + bearer-auth checkpoint. Reconnect ChatGPT and verify authorization completes, `/oauth/token` returns 200, and the subsequent authenticated `/mcp` request is accepted.
