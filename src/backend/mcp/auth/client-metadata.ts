@@ -36,13 +36,16 @@ export async function resolveClientMetadata(clientId: string): Promise<ClientMet
   try {
     response = await fetch(url, {
       headers: { Accept: "application/json" },
-      redirect: "error",
+      // Cloudflare Workers supports only "follow" and "manual" at the edge.
+      // Keep redirects manual so a CIMD URL cannot bypass our validated target.
+      redirect: "manual",
       signal: controller.signal,
     });
   } finally {
     clearTimeout(timeout);
   }
 
+  if (response.status >= 300 && response.status < 400) throw new Error("CIMD lookup attempted a redirect.");
   if (!response.ok) throw new Error(`CIMD lookup failed with HTTP ${response.status}.`);
   const length = Number(response.headers.get("Content-Length") ?? 0);
   if (length > MAX_METADATA_BYTES) throw new Error("CIMD document is too large.");
