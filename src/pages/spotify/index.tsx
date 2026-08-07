@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useToast } from "@/hooks/use-toast";
 import {
   List,
@@ -472,19 +472,40 @@ export default function Spotify() {
   const repeatState = isRecord(playbackData) && typeof (playbackData as Record<string, unknown>).repeat_state === "string" ? (playbackData as Record<string, unknown>).repeat_state as string : "off";
   const repeatActive = repeatState !== "off";
 
-  const queueItems = getSpotifyQueueItems(queueData).map((entry): QueueItem => {
-    const track = isRecord(entry.track) ? entry.track : entry;
-    return {
-      imageUrl: getSpotifySmallestTrackImage(track),
-      title: getSpotifyTrackTitle(track),
-      artist: getSpotifyTrackArtists(track),
-      duration: formatTime(getSpotifyTrackDurationMs(track)),
-      current: false,
-      trackUrl: getSpotifyTrackUrl(track),
-    };
-  });
+  const queueItems = useMemo(() => {
+    return getSpotifyQueueItems(queueData).map((entry): QueueItem => {
+      const track = isRecord(entry.track) ? entry.track : entry;
+
+      return {
+        imageUrl: getSpotifySmallestTrackImage(track),
+        title: getSpotifyTrackTitle(track),
+        artist: getSpotifyTrackArtists(track),
+        duration: formatTime(getSpotifyTrackDurationMs(track)),
+        current: false,
+        trackUrl: getSpotifyTrackUrl(track),
+      };
+    });
+  }, [queueData]);
 
   const albumImageUrl = getSpotifyTrackImage(displayPlaybackTrack, 320);
+
+  const queueImageUrls = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          queueItems
+            .map((item) => item.imageUrl)
+            .filter((url): url is string => Boolean(url))
+        )
+      ),
+    [queueItems]
+  );
+
+  const artworkKey = useMemo(
+    () => [albumImageUrl, ...queueImageUrls].join("|"),
+    [albumImageUrl, queueImageUrls]
+  );
+
   const albumName = getSpotifyAlbumName(displayPlaybackTrack);
   const playlistName = getSpotifyContextName(playbackData);
   const deviceName = getSpotifyDeviceName(playbackData);
@@ -592,75 +613,29 @@ export default function Spotify() {
   }, []);
 
   useEffect(() => {
-    let canceled = false;
-    const controller = new AbortController();
-
-    async function loadTrackImage() {
-      if (!albumImageUrl) {
-        setTrackImageDataUrl(null);
-        return;
-      }
-
-      const cached = artworkCacheRef.current.get(albumImageUrl);
-      if (cached !== undefined) {
-        setTrackImageDataUrl(cached);
-        return;
-      }
-
-      if (artworkPendingRef.current.has(albumImageUrl)) {
-        return;
-      }
-
-      artworkPendingRef.current.add(albumImageUrl);
-
-      try {
-        // Use backend proxy to avoid CSP connect-src blocking on Spotify CDN
-        const proxyUrl = `/api/spotify/artwork?url=${encodeURIComponent(albumImageUrl)}`;
-        const response = await fetch(proxyUrl, { signal: controller.signal });
-        if (!response.ok) {
-          artworkCacheRef.current.set(albumImageUrl, null);
-          setTrackImageDataUrl(null);
-          return;
-        }
-
-        const json = await response.json();
-        if (canceled) return;
-        if (json && json.success === true && typeof json.dataUrl === "string") {
-          artworkCacheRef.current.set(albumImageUrl, json.dataUrl);
-          setTrackImageDataUrl(json.dataUrl);
-        } else {
-          artworkCacheRef.current.set(albumImageUrl, null);
-          setTrackImageDataUrl(null);
-        }
-      } catch {
-        if (canceled) return;
-        artworkCacheRef.current.set(albumImageUrl, null);
-        setTrackImageDataUrl(null);
-      } finally {
-        artworkPendingRef.current.delete(albumImageUrl);
-      }
-    }
-
-    loadTrackImage();
-
-    return () => {
-      canceled = true;
-      controller.abort();
-    };
-  }, [albumImageUrl]);
-
-  useEffect(() => {
-    const urlsToPrefetch = [albumImageUrl, ...queueItems.map((item) => item.imageUrl)].filter(
-      (url): url is string => Boolean(url)
+    const urlsToFetch = Array.from(
+      new Set([...(albumImageUrl ? [albumImageUrl] : []), ...queueImageUrls])
     );
 
-    if (!urlsToPrefetch.length) return;
+    if (!urlsToFetch.length) {
+      setTrackImageDataUrl(null);
+      return undefined;
+    }
 
     let canceled = false;
 
-    async function prefetchArtwork(url: string) {
-      if (artworkCacheRef.current.has(url)) return;
-      if (artworkPendingRef.current.has(url)) return;
+    async function fetchArtwork(url: string) {
+      const cached = artworkCacheRef.current.get(url);
+      if (cached !== undefined) {
+        if (url === albumImageUrl) {
+          setTrackImageDataUrl(cached);
+        }
+        return;
+      }
+
+      if (artworkPendingRef.current.has(url)) {
+        return;
+      }
 
       artworkPendingRef.current.add(url);
 
@@ -668,30 +643,43 @@ export default function Spotify() {
         const response = await fetch(`/api/spotify/artwork?url=${encodeURIComponent(url)}`);
         if (!response.ok) {
           artworkCacheRef.current.set(url, null);
+          if (url === albumImageUrl) {
+            setTrackImageDataUrl(null);
+          }
           return;
         }
 
         const json = await response.json();
         if (canceled) return;
+
         if (json && json.success === true && typeof json.dataUrl === "string") {
           artworkCacheRef.current.set(url, json.dataUrl);
+          if (url === albumImageUrl) {
+            setTrackImageDataUrl(json.dataUrl);
+          }
         } else {
           artworkCacheRef.current.set(url, null);
+          if (url === albumImageUrl) {
+            setTrackImageDataUrl(null);
+          }
         }
       } catch {
         if (canceled) return;
         artworkCacheRef.current.set(url, null);
+        if (url === albumImageUrl) {
+          setTrackImageDataUrl(null);
+        }
       } finally {
         artworkPendingRef.current.delete(url);
       }
     }
 
-    void Promise.all(urlsToPrefetch.map((url) => prefetchArtwork(url)));
+    void Promise.all(urlsToFetch.map((url) => fetchArtwork(url)));
 
     return () => {
       canceled = true;
     };
-  }, [albumImageUrl, queueItems]);
+  }, [artworkKey]);
 
   useEffect(() => {
     if (!spotifyError || spotifyErrorToastId.current) return;
