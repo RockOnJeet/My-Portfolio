@@ -1273,27 +1273,8 @@ export default function Spotify() {
               <span style={{ fontSize: 11, color: "var(--muted-100)", fontWeight: 700 }}>{deviceName}</span>
             </div>
           </div>
-
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 7,
-              padding: "8px 14px",
-              borderRadius: 20,
-              background: "rgba(255,255,255,0.06)",
-              width: "fit-content",
-              margin: "0 auto",
-            }}
-          >
-            <Smartphone size={13} color="var(--muted-500)" />
-            <span style={{ fontSize: 11, color: "var(--muted-500)", fontWeight: 600 }}>Listening on&nbsp;</span>
-            <span style={{ fontSize: 11, color: "var(--muted-100)", fontWeight: 700 }}>{deviceName}</span>
-          </div>
+        </main>
       </div>
-    </main>
-    </div >
-  </div >
+    </div>
   );
 }
