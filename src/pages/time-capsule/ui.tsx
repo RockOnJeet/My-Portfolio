@@ -111,6 +111,7 @@ export const useIntersectionObserver = (options = {}) => {
           if (index) {
             (entry.target as HTMLElement).style.transitionDelay = `${parseInt(index) * 0.15}s`;
           }
+          observer.unobserve(entry.target);
         }
       });
     }, { threshold: 0.1, ...options });
@@ -147,10 +148,11 @@ type ZoneProps = {
   children: ReactNode;
   name: string;
   className?: string;
+  prioritizePhotos?: boolean;
   onPhotoClick?: (photo: { id: string; src: string; fullSrc: string; zone: string; label: string }) => void;
 };
 
-export const Zone = ({ children, name, className = "", onPhotoClick }: ZoneProps) => {
+export const Zone = ({ children, name, className = "", prioritizePhotos = false, onPhotoClick }: ZoneProps) => {
   const [removedPhotoIds, setRemovedPhotoIds] = useState<string[]>([]);
   const [removingPhotoIds, setRemovingPhotoIds] = useState<string[]>([]);
   const photoSources = ZONE_PHOTOS[name] ?? [];
@@ -239,7 +241,14 @@ export const Zone = ({ children, name, className = "", onPhotoClick }: ZoneProps
             >
               <div className="zone-photo-frame">
                 {photo.src ? (
-                  <img src={photo.src} alt={label} loading="eager" decoding="async" className="zone-photo-img" />
+                  <img
+                    src={photo.src}
+                    alt={label}
+                    loading={prioritizePhotos ? "eager" : "lazy"}
+                    fetchPriority={prioritizePhotos ? "high" : "auto"}
+                    decoding="async"
+                    className="zone-photo-img"
+                  />
                 ) : (
                   <div className="zone-photo-placeholder" />
                 )}

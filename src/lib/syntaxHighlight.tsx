@@ -1,8 +1,17 @@
-import { getSingletonHighlighter, type BundledLanguage, type ThemedToken } from "shiki";
+import { createHighlighterCore, type ThemedToken } from "shiki/core";
+import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
+import darkPlus from "@shikijs/themes/dark-plus";
+import c from "@shikijs/langs/c";
+import cpp from "@shikijs/langs/cpp";
+import python from "@shikijs/langs/python";
+import typescript from "@shikijs/langs/typescript";
+import xml from "@shikijs/langs/xml";
 
 const THEME = "dark-plus";
 
-const languageMap: Record<string, BundledLanguage> = {
+type EditorLanguage = "python" | "c" | "cpp" | "xml" | "typescript";
+
+const languageMap: Record<string, EditorLanguage> = {
   py: "python",
   python: "python",
   c: "c",
@@ -16,15 +25,14 @@ const languageMap: Record<string, BundledLanguage> = {
   typescript: "typescript",
 };
 
-const supportedLanguages = [...new Set(Object.values(languageMap))];
-
-let highlighterPromise: ReturnType<typeof getSingletonHighlighter> | null = null;
+let highlighterPromise: ReturnType<typeof createHighlighterCore> | null = null;
 
 async function getHighlighter() {
   if (!highlighterPromise) {
-    highlighterPromise = getSingletonHighlighter({
-      themes: [THEME],
-      langs: supportedLanguages,
+    highlighterPromise = createHighlighterCore({
+      themes: [darkPlus],
+      langs: [python, c, cpp, xml, typescript],
+      engine: createJavaScriptRegexEngine(),
     });
   }
 
@@ -37,7 +45,7 @@ export function isSupportedEditorLanguage(language: string): boolean {
 
 export async function tokenizeForEditor(
   code: string,
-  language: string
+  language: string,
 ): Promise<ThemedToken[][] | null> {
   const resolvedLang = languageMap[language.toLowerCase()];
   if (!resolvedLang) {
@@ -45,7 +53,7 @@ export async function tokenizeForEditor(
   }
 
   const highlighter = await getHighlighter();
-  const result = await highlighter.codeToTokens(code, {
+  const result = highlighter.codeToTokens(code, {
     lang: resolvedLang,
     theme: THEME,
   });
