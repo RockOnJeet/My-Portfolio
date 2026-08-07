@@ -33,8 +33,8 @@ const DURATION = "340ms";
 const TRANSITION = `${DURATION} ${EASING}`;
 const QUEUE_PANEL_ID = "spotify-queue-panel";
 const QUEUE_HEADING_ID = "spotify-queue-heading";
-const SPOTIFY_CONSOLE_URL = "https://rockonjeet.pages.dev/api/spotify/console/";
-const SPOTIFY_SUBSCRIBE_URL = "https://rockonjeet.pages.dev/api/spotify/subscribe/";
+const SPOTIFY_CONSOLE_URL = "/api/spotify/console/";
+const SPOTIFY_SUBSCRIBE_URL = "/api/spotify/subscribe/";
 
 type Song = (typeof QUEUE_SONGS)[number];
 type QueueItem = Song & { imageUrl: string | null; trackUrl?: string | null };
