@@ -31,7 +31,6 @@ export function AnimatedBackground({
     if (!ctx) return;
 
     const img = new Image();
-    img.crossOrigin = "anonymous";
     img.src = albumArtSrc;
 
     let animationFrameId: number | undefined;
