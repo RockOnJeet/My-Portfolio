@@ -429,8 +429,8 @@ export default function Spotify() {
   const [renderTick, setRenderTick] = useState(0);
   const [trackImageDataUrl, setTrackImageDataUrl] = useState<string | null>(null);
   const artworkCacheRef = useRef<Map<string, string | null>>(new Map());
-  const artworkPendingRef = useRef<Set<string>>(new Set());
   const artworkInFlightRef = useRef<Map<string, Promise<string | null>>>(new Map());
+  const artworkVersionRef = useRef(0);
 
   const { toast } = useToast();
   const spotifyErrorToastId = useRef<string | null>(null);
@@ -665,6 +665,9 @@ export default function Spotify() {
       return undefined;
     }
 
+    const version = artworkVersionRef.current + 1;
+    artworkVersionRef.current = version;
+
     let canceled = false;
 
     async function hydrateArtworkCache() {
@@ -675,7 +678,7 @@ export default function Spotify() {
         })
       );
 
-      if (canceled) return;
+      if (canceled || artworkVersionRef.current !== version) return;
 
       const resolvedPrimary = resolved.find((entry) => entry.url === albumImageUrl);
       if (resolvedPrimary) {
