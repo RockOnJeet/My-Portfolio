@@ -754,8 +754,8 @@ export default function Spotify() {
         overflow: "hidden",
       }}
     >
-      {albumImageUrl ? (
-        <AnimatedBackground albumArtSrc={albumImageUrl} />
+      {trackImageDataUrl ? (
+        <AnimatedBackground albumArtSrc={trackImageDataUrl} />
       ) : (
         <div
           style={{
