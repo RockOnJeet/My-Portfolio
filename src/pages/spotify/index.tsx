@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useToast } from "@/hooks/use-toast";
 import {
   List,
@@ -13,6 +13,8 @@ import {
   Smartphone,
   X,
 } from "lucide-react";
+import { FaSpotify } from "react-icons/fa";
+import { AnimatedBackground } from "./AnimatedBackground";
 
 const QUEUE_SONGS = [
   { title: "Saadi Galli Aaja", artist: "Ayushmann Khurrana, Neeti Mohan", duration: "4:13", current: true },
@@ -427,7 +429,8 @@ export default function Spotify() {
   const [renderTick, setRenderTick] = useState(0);
   const [trackImageDataUrl, setTrackImageDataUrl] = useState<string | null>(null);
   const artworkCacheRef = useRef<Map<string, string | null>>(new Map());
-  const artworkPendingRef = useRef<Set<string>>(new Set());
+  const artworkInFlightRef = useRef<Map<string, Promise<string | null>>>(new Map());
+  const artworkVersionRef = useRef(0);
 
   const { toast } = useToast();
   const spotifyErrorToastId = useRef<string | null>(null);
@@ -470,19 +473,82 @@ export default function Spotify() {
   const repeatState = isRecord(playbackData) && typeof (playbackData as Record<string, unknown>).repeat_state === "string" ? (playbackData as Record<string, unknown>).repeat_state as string : "off";
   const repeatActive = repeatState !== "off";
 
-  const queueItems = getSpotifyQueueItems(queueData).map((entry): QueueItem => {
-    const track = isRecord(entry.track) ? entry.track : entry;
-    return {
-      imageUrl: getSpotifySmallestTrackImage(track),
-      title: getSpotifyTrackTitle(track),
-      artist: getSpotifyTrackArtists(track),
-      duration: formatTime(getSpotifyTrackDurationMs(track)),
-      current: false,
-      trackUrl: getSpotifyTrackUrl(track),
-    };
-  });
+  const queueItems = useMemo(() => {
+    return getSpotifyQueueItems(queueData).map((entry): QueueItem => {
+      const track = isRecord(entry.track) ? entry.track : entry;
+
+      return {
+        imageUrl: getSpotifySmallestTrackImage(track),
+        title: getSpotifyTrackTitle(track),
+        artist: getSpotifyTrackArtists(track),
+        duration: formatTime(getSpotifyTrackDurationMs(track)),
+        current: false,
+        trackUrl: getSpotifyTrackUrl(track),
+      };
+    });
+  }, [queueData]);
 
   const albumImageUrl = getSpotifyTrackImage(displayPlaybackTrack, 320);
+
+  const queueImageUrls = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          queueItems
+            .map((item) => item.imageUrl)
+            .filter((url): url is string => Boolean(url))
+        )
+      ),
+    [queueItems]
+  );
+
+  const artworkKey = useMemo(
+    () => [albumImageUrl, ...queueImageUrls].join("|"),
+    [albumImageUrl, queueImageUrls]
+  );
+
+  const fetchArtworkDataUrl = async (url: string): Promise<string | null> => {
+    const cached = artworkCacheRef.current.get(url);
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    const inFlight = artworkInFlightRef.current.get(url);
+    if (inFlight) {
+      return inFlight;
+    }
+
+    const request = (async () => {
+      try {
+        const response = await fetch(`/api/spotify/artwork?url=${encodeURIComponent(url)}`);
+        if (!response.ok) {
+          artworkCacheRef.current.set(url, null);
+          return null;
+        }
+
+        const json = await response.json();
+        if (json && json.success === true && typeof json.dataUrl === "string") {
+          artworkCacheRef.current.set(url, json.dataUrl);
+          return json.dataUrl;
+        }
+
+        artworkCacheRef.current.set(url, null);
+        return null;
+      } catch {
+        artworkCacheRef.current.set(url, null);
+        return null;
+      }
+    })();
+
+    artworkInFlightRef.current.set(url, request);
+
+    try {
+      return await request;
+    } finally {
+      artworkInFlightRef.current.delete(url);
+    }
+  };
+
   const albumName = getSpotifyAlbumName(displayPlaybackTrack);
   const playlistName = getSpotifyContextName(playbackData);
   const deviceName = getSpotifyDeviceName(playbackData);
@@ -590,106 +656,44 @@ export default function Spotify() {
   }, []);
 
   useEffect(() => {
-    let canceled = false;
-    const controller = new AbortController();
-
-    async function loadTrackImage() {
-      if (!albumImageUrl) {
-        setTrackImageDataUrl(null);
-        return;
-      }
-
-      const cached = artworkCacheRef.current.get(albumImageUrl);
-      if (cached !== undefined) {
-        setTrackImageDataUrl(cached);
-        return;
-      }
-
-      if (artworkPendingRef.current.has(albumImageUrl)) {
-        return;
-      }
-
-      artworkPendingRef.current.add(albumImageUrl);
-
-      try {
-        // Use backend proxy to avoid CSP connect-src blocking on Spotify CDN
-        const proxyUrl = `/api/spotify/artwork?url=${encodeURIComponent(albumImageUrl)}`;
-        const response = await fetch(proxyUrl, { signal: controller.signal });
-        if (!response.ok) {
-          artworkCacheRef.current.set(albumImageUrl, null);
-          setTrackImageDataUrl(null);
-          return;
-        }
-
-        const json = await response.json();
-        if (canceled) return;
-        if (json && json.success === true && typeof json.dataUrl === "string") {
-          artworkCacheRef.current.set(albumImageUrl, json.dataUrl);
-          setTrackImageDataUrl(json.dataUrl);
-        } else {
-          artworkCacheRef.current.set(albumImageUrl, null);
-          setTrackImageDataUrl(null);
-        }
-      } catch {
-        if (canceled) return;
-        artworkCacheRef.current.set(albumImageUrl, null);
-        setTrackImageDataUrl(null);
-      } finally {
-        artworkPendingRef.current.delete(albumImageUrl);
-      }
-    }
-
-    loadTrackImage();
-
-    return () => {
-      canceled = true;
-      controller.abort();
-    };
-  }, [albumImageUrl]);
-
-  useEffect(() => {
-    const urlsToPrefetch = [albumImageUrl, ...queueItems.map((item) => item.imageUrl)].filter(
-      (url): url is string => Boolean(url)
+    const urlsToFetch = Array.from(
+      new Set([...(albumImageUrl ? [albumImageUrl] : []), ...queueImageUrls])
     );
 
-    if (!urlsToPrefetch.length) return;
+    if (!urlsToFetch.length) {
+      setTrackImageDataUrl(null);
+      return undefined;
+    }
+
+    const version = artworkVersionRef.current + 1;
+    artworkVersionRef.current = version;
 
     let canceled = false;
 
-    async function prefetchArtwork(url: string) {
-      if (artworkCacheRef.current.has(url)) return;
-      if (artworkPendingRef.current.has(url)) return;
+    async function hydrateArtworkCache() {
+      const resolved = await Promise.all(
+        urlsToFetch.map(async (url) => {
+          const dataUrl = await fetchArtworkDataUrl(url);
+          return { url, dataUrl };
+        })
+      );
 
-      artworkPendingRef.current.add(url);
+      if (canceled || artworkVersionRef.current !== version) return;
 
-      try {
-        const response = await fetch(`/api/spotify/artwork?url=${encodeURIComponent(url)}`);
-        if (!response.ok) {
-          artworkCacheRef.current.set(url, null);
-          return;
-        }
-
-        const json = await response.json();
-        if (canceled) return;
-        if (json && json.success === true && typeof json.dataUrl === "string") {
-          artworkCacheRef.current.set(url, json.dataUrl);
-        } else {
-          artworkCacheRef.current.set(url, null);
-        }
-      } catch {
-        if (canceled) return;
-        artworkCacheRef.current.set(url, null);
-      } finally {
-        artworkPendingRef.current.delete(url);
+      const resolvedPrimary = resolved.find((entry) => entry.url === albumImageUrl);
+      if (resolvedPrimary) {
+        setTrackImageDataUrl(resolvedPrimary.dataUrl);
+      } else {
+        setTrackImageDataUrl(null);
       }
     }
 
-    void Promise.all(urlsToPrefetch.map((url) => prefetchArtwork(url)));
+    void hydrateArtworkCache();
 
     return () => {
       canceled = true;
     };
-  }, [albumImageUrl, queueItems]);
+  }, [artworkKey]);
 
   useEffect(() => {
     if (!spotifyError || spotifyErrorToastId.current) return;
@@ -745,515 +749,534 @@ export default function Spotify() {
   return (
     <div
       style={{
-        background:
-          "radial-gradient(circle at top left, rgba(29,185,84,0.16), transparent 30%), radial-gradient(circle at 85% 15%, rgba(255,255,255,0.06), transparent 18%), linear-gradient(135deg, var(--bg-dark-900) 0%, var(--bg-dark-800) 45%, var(--bg-dark-700) 100%)",
+        position: "relative",
         fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
-        height: "100vh",
+        minHeight: "100vh",
         width: "100%",
-        display: "flex",
-        flexDirection: isMobile ? "column" : "row",
         overflow: "hidden",
       }}
     >
-      <aside
-        ref={queuePanelRef}
-        id={QUEUE_PANEL_ID}
-        aria-labelledby={QUEUE_HEADING_ID}
-        aria-hidden={!queueOpen}
-        role="complementary"
-        style={{
-          order: isMobile ? 1 : 2,
-          flexShrink: 0,
-          overflow: "hidden",
-          background: "rgba(255,255,255,0.03)",
-          display: "flex",
-          flexDirection: "column",
-          ...(isMobile
-            ? {
-              maxHeight: queueOpen ? `${queueH}px` : "0px",
-              width: "100%",
-              transition: `max-height ${TRANSITION}`,
-            }
-            : {
-              width: queueOpen ? `${queueW}px` : "0px",
-              height: "100vh",
-              transition: `width ${TRANSITION}`,
-              borderLeft: queueOpen ? "1px solid rgba(255,255,255,0.08)" : "none",
-            }),
-        }}
-      >
+      {trackImageDataUrl ? (
+        <AnimatedBackground albumArtSrc={trackImageDataUrl} />
+      ) : (
         <div
           style={{
-            width: isMobile ? "100%" : `${queueW}px`,
-            height: isMobile ? `${queueH}px` : "100%",
+            position: "absolute",
+            inset: 0,
+            background:
+              "radial-gradient(circle at top left, rgba(29,185,84,0.16), transparent 30%), radial-gradient(circle at 85% 15%, rgba(255,255,255,0.06), transparent 18%), linear-gradient(135deg, var(--bg-dark-900) 0%, var(--bg-dark-800) 45%, var(--bg-dark-700) 100%)",
+          }}
+        />
+      )}
+
+      <div
+        style={{
+          position: "relative",
+          display: "flex",
+          flexDirection: isMobile ? "column" : "row",
+          minHeight: "100vh",
+        }}
+      >
+        <aside
+          ref={queuePanelRef}
+          id={QUEUE_PANEL_ID}
+          aria-labelledby={QUEUE_HEADING_ID}
+          aria-hidden={!queueOpen}
+          role="complementary"
+          style={{
+            order: isMobile ? 1 : 2,
+            flexShrink: 0,
+            overflow: "hidden",
+            background: "rgba(255,255,255,0.03)",
             display: "flex",
             flexDirection: "column",
+            ...(isMobile
+              ? {
+                maxHeight: queueOpen ? `${queueH}px` : "0px",
+                width: "100%",
+                transition: `max-height ${TRANSITION}`,
+              }
+              : {
+                width: queueOpen ? `${queueW}px` : "0px",
+                height: "100vh",
+                transition: `width ${TRANSITION}`,
+                borderLeft: queueOpen ? "1px solid rgba(255,255,255,0.08)" : "none",
+              }),
           }}
         >
           <div
             style={{
+              width: isMobile ? "100%" : `${queueW}px`,
+              height: isMobile ? `${queueH}px` : "100%",
               display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "16px 20px 8px",
+              flexDirection: "column",
             }}
           >
-            <h2 id={QUEUE_HEADING_ID} style={{ fontSize: 15, fontWeight: 700, color: "var(--muted-100)", margin: 0 }}>
-              Queue
-            </h2>
-            <button
-              onClick={() => setQueueOpen(false)}
-              aria-label="Close queue"
+            <div
               style={{
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                padding: 4,
-                borderRadius: 4,
-                opacity: 0.6,
-                transition: `opacity ${TRANSITION}`,
+                justifyContent: "space-between",
+                padding: "16px 20px 8px",
               }}
-              onMouseEnter={(event) => (event.currentTarget.style.opacity = "1")}
-              onMouseLeave={(event) => (event.currentTarget.style.opacity = "0.6")}
             >
-              <X size={16} color="var(--muted-500)" />
-            </button>
-          </div>
-
-          <p
-            style={{
-              fontSize: 10,
-              fontWeight: 700,
-              color: "var(--muted-400)",
-              letterSpacing: "0.06em",
-              textTransform: "uppercase",
-              padding: "4px 20px 8px",
-              margin: 0,
-            }}
-          >
-            Now playing
-          </p>
-
-          <div style={{ overflowY: "auto", flex: 1, paddingBottom: 12 }}>
-            {playbackTrack ? (
-              <QueueRow
-                key="current"
-                song={{
-                  title: playbackTitle,
-                  artist: playbackArtist,
-                  duration: playbackDurationMs ? formatTime(playbackDurationMs) : "--:--",
-                  current: true,
-                  imageUrl: null,
-                  trackUrl: null,
-                }}
-                imageDataUrl={trackImageDataUrl}
-              />
-            ) : (
-              <div
+              <h2 id={QUEUE_HEADING_ID} style={{ fontSize: 15, fontWeight: 700, color: "var(--muted-100)", margin: 0 }}>
+                Queue
+              </h2>
+              <button
+                onClick={() => setQueueOpen(false)}
+                aria-label="Close queue"
                 style={{
-                  color: "var(--muted-300)",
-                  fontSize: 12,
-                  padding: "8px 12px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: 4,
+                  borderRadius: 4,
+                  opacity: 0.6,
+                  transition: `opacity ${TRANSITION}`,
                 }}
+                onMouseEnter={(event) => (event.currentTarget.style.opacity = "1")}
+                onMouseLeave={(event) => (event.currentTarget.style.opacity = "0.6")}
               >
-                No song currently playing.
-              </div>
-            )}
-
-            <p
-              style={{
-                fontSize: 10,
-                fontWeight: 700,
-                color: "var(--muted-400)",
-                letterSpacing: "0.06em",
-                textTransform: "uppercase",
-                margin: "12px 20px 6px",
-              }}
-            >
-              Next in queue
-            </p>
-
-            {queueItems.length > 0 ? (
-              queueItems.map((song, index) => (
-                <QueueRow
-                  key={index}
-                  song={song}
-                  imageDataUrl={song.imageUrl ? artworkCacheRef.current.get(song.imageUrl) ?? null : null}
-                />
-              ))
-            ) : (
-              <div
-                style={{
-                  color: "var(--muted-300)",
-                  fontSize: 12,
-                  padding: "8px 12px",
-                }}
-              >
-                No upcoming songs in queue.
-              </div>
-            )}
-          </div>
-        </div>
-      </aside>
-
-      <main
-        style={{
-          order: isMobile ? 2 : 1,
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100vh",
-          overflow: "hidden",
-          padding: "32px 24px",
-          transition: `flex ${TRANSITION}`,
-          boxSizing: "border-box",
-        }}
-      >
-        <div
-          style={{
-            width: "100%",
-            maxWidth: 340,
-            marginBottom: 20,
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-          }}
-        >
-          <div style={{ display: "flex", flexDirection: "column", gap: 3, flexShrink: 0 }}>
-            {[14, 10, 14].map((width, index) => (
-              <span
-                key={index}
-                style={{ display: "block", width, height: 2, background: "var(--muted-400)", borderRadius: 99 }}
-              />
-            ))}
-          </div>
-          <div>
-            <p
-              style={{
-                fontSize: 10,
-                color: "var(--muted-400)",
-                letterSpacing: "0.06em",
-                fontWeight: 700,
-                textTransform: "uppercase",
-                margin: 0,
-              }}
-            >
-              Playing from playlist
-            </p>
-            <p style={{ fontSize: 11, color: "var(--muted-500)", fontWeight: 700, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {playlistName}
-            </p>
-          </div>
-        </div>
-
-        <div
-          style={{
-            borderRadius: 10,
-            overflow: "hidden",
-            boxShadow: "0 20px 60px rgba(0,0,0,0.45)",
-            margin: "0 auto 24px",
-            flexShrink: 0,
-            width: "min(320px, calc(100% - 0px))",
-            aspectRatio: "1 / 1",
-            transition: `width ${TRANSITION}`,
-            position: "relative",
-            background:
-              "radial-gradient(circle at 30% 28%, rgba(255,255,255,0.14), transparent 22%), radial-gradient(circle at 70% 70%, rgba(0,0,0,0.24), transparent 24%), linear-gradient(135deg, var(--spotify-green) 0%, #0f8f43 42%, var(--bg-dark-900) 100%)",
-          }}
-        >
-          {trackImageDataUrl ? (
-            <img
-              src={trackImageDataUrl}
-              alt={playbackTitle ? `${playbackTitle} album art` : "Spotify album art"}
-              style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-                display: "block",
-              }}
-            />
-          ) : (
-            <div
-              style={{
-                width: "100%",
-                height: "100%",
-                display: "grid",
-                placeItems: "center",
-                background: "linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))",
-                color: "var(--muted-100)",
-                letterSpacing: "0.12em",
-                textTransform: "uppercase",
-                fontSize: 12,
-                fontWeight: 700,
-              }}
-            >
-              No artwork
+                <X size={16} color="var(--muted-500)" />
+              </button>
             </div>
-          )}
-        </div>
 
-        <div style={{ width: "100%", maxWidth: 340, marginBottom: 16, textAlign: "center" }}>
-          <h1
-            style={{
-              fontSize: 20,
-              fontWeight: 700,
-              color: "var(--muted-100)",
-              margin: "0 0 3px",
-              letterSpacing: "-0.02em",
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-          >
-            {noSongPlaying ? (
-              "No song playing XoX"
-            ) : playbackTrackUrl ? (
-              <a
-                href={playbackTrackUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  color: "var(--muted-100)",
-                  textDecoration: "none",
-                }}
-              >
-                {playbackTitle}
-              </a>
-            ) : (
-              playbackTitle
-            )}
-          </h1>
-          {!noSongPlaying && (
             <p
               style={{
-                fontSize: 13,
+                fontSize: 10,
+                fontWeight: 700,
                 color: "var(--muted-400)",
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
+                padding: "4px 20px 8px",
                 margin: 0,
+              }}
+            >
+              Now playing
+            </p>
+
+            <div style={{ overflowY: "auto", flex: 1, paddingBottom: 12 }}>
+              {playbackTrack ? (
+                <QueueRow
+                  key="current"
+                  song={{
+                    title: playbackTitle,
+                    artist: playbackArtist,
+                    duration: playbackDurationMs ? formatTime(playbackDurationMs) : "--:--",
+                    current: true,
+                    imageUrl: null,
+                    trackUrl: null,
+                  }}
+                  imageDataUrl={trackImageDataUrl}
+                />
+              ) : (
+                <div
+                  style={{
+                    color: "var(--muted-300)",
+                    fontSize: 12,
+                    padding: "8px 12px",
+                  }}
+                >
+                  No song currently playing.
+                </div>
+              )}
+
+              <p
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: "var(--muted-400)",
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                  margin: "12px 20px 6px",
+                }}
+              >
+                Next in queue
+              </p>
+
+              {queueItems.length > 0 ? (
+                queueItems.map((song, index) => (
+                  <QueueRow
+                    key={index}
+                    song={song}
+                    imageDataUrl={song.imageUrl ? artworkCacheRef.current.get(song.imageUrl) ?? null : null}
+                  />
+                ))
+              ) : (
+                <div
+                  style={{
+                    color: "var(--muted-300)",
+                    fontSize: 12,
+                    padding: "8px 12px",
+                  }}
+                >
+                  No upcoming songs in queue.
+                </div>
+              )}
+            </div>
+          </div>
+        </aside>
+
+        <main
+          style={{
+            order: isMobile ? 2 : 1,
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            height: "100vh",
+            overflow: "hidden",
+            padding: "32px 24px",
+            transition: `flex ${TRANSITION}`,
+            boxSizing: "border-box",
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 340,
+              marginBottom: 20,
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+            }}
+          >
+            <div style={{ display: "flex", flexDirection: "column", gap: 3, flexShrink: 0 }}>
+              {[14, 10, 14].map((width, index) => (
+                <span
+                  key={index}
+                  style={{ display: "block", width, height: 2, background: "var(--muted-400)", borderRadius: 99 }}
+                />
+              ))}
+            </div>
+            <div>
+              <p
+                style={{
+                  fontSize: 10,
+                  color: "var(--muted-400)",
+                  letterSpacing: "0.06em",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  margin: 0,
+                }}
+              >
+                Playing from playlist
+              </p>
+              <p style={{ fontSize: 11, color: "var(--muted-500)", fontWeight: 700, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                {playlistName}
+              </p>
+            </div>
+          </div>
+
+          <div
+            style={{
+              borderRadius: 10,
+              overflow: "hidden",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.45)",
+              margin: "0 auto 24px",
+              flexShrink: 0,
+              width: "min(320px, calc(100% - 0px))",
+              aspectRatio: "1 / 1",
+              transition: `width ${TRANSITION}`,
+              position: "relative",
+              background:
+                "radial-gradient(circle at 30% 28%, rgba(255,255,255,0.14), transparent 22%), radial-gradient(circle at 70% 70%, rgba(0,0,0,0.24), transparent 24%), linear-gradient(135deg, var(--spotify-green) 0%, #0f8f43 42%, var(--bg-dark-900) 100%)",
+            }}
+          >
+            {trackImageDataUrl ? (
+              <img
+                src={trackImageDataUrl}
+                alt={playbackTitle ? `${playbackTitle} album art` : "Spotify album art"}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  display: "block",
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  display: "grid",
+                  placeItems: "center",
+                  background: "linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))",
+                  color: "var(--muted-100)",
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                  fontSize: 12,
+                  fontWeight: 700,
+                }}
+              >
+                No artwork
+              </div>
+            )}
+          </div>
+
+          <div style={{ width: "100%", maxWidth: 340, marginBottom: 16, textAlign: "center" }}>
+            <h1
+              style={{
+                fontSize: 20,
+                fontWeight: 700,
+                color: "var(--muted-100)",
+                margin: "0 0 3px",
+                letterSpacing: "-0.02em",
                 whiteSpace: "nowrap",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
               }}
             >
-              {playbackArtist}
-            </p>
-          )}
-        </div>
-
-        <div style={{ width: "100%", maxWidth: 340 }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 24,
-              marginBottom: 14,
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <button
-                disabled
-                title="Theme (coming soon)"
-                aria-label="Theme"
+              {noSongPlaying ? (
+                "No song playing XoX"
+              ) : playbackTrackUrl ? (
+                <a
+                  href={playbackTrackUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    color: "var(--muted-100)",
+                    textDecoration: "none",
+                  }}
+                >
+                  {playbackTitle}
+                </a>
+              ) : (
+                playbackTitle
+              )}
+            </h1>
+            {!noSongPlaying && (
+              <p
                 style={{
+                  fontSize: 13,
+                  color: "var(--muted-400)",
+                  margin: 0,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {playbackArtist}
+              </p>
+            )}
+          </div>
+
+          <div style={{ width: "100%", maxWidth: 340 }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 24,
+                marginBottom: 14,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                <button
+                  disabled
+                  title="Theme (coming soon)"
+                  aria-label="Theme"
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "not-allowed",
+                    padding: 4,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    opacity: 0.35,
+                  }}
+                >
+                  <Palette size={20} color="var(--muted-400)" />
+                </button>
+                <button disabled title={shuffleDisabled ? "Shuffle (disabled)" : "Shuffle"} style={{
                   background: "none",
                   border: "none",
                   cursor: "not-allowed",
                   padding: 4,
+                  opacity: 0.28,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}>
+                  <Shuffle size={16} color={shuffleActive ? "var(--spotify-green)" : "var(--muted-500)"} />
+                </button>
+                <button disabled title={previousDisabled ? "Previous (disabled)" : "Previous"} style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "not-allowed",
+                  padding: 4,
+                  opacity: 0.28,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}>
+                  <SkipBack size={20} color="var(--muted-500)" />
+                </button>
+              </div>
+
+              <button
+                disabled
+                title={playDisabled ? "Play (disabled)" : isPlaying ? "Pause" : "Play"}
+                style={{
+                  background: "rgba(255,255,255,0.10)",
+                  border: "none",
+                  cursor: "not-allowed",
+                  width: 44,
+                  height: 44,
+                  borderRadius: "50%",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   opacity: 0.35,
+                  flexShrink: 0,
                 }}
               >
-                <Palette size={20} color="var(--muted-400)" />
+                {isPlaying ? (
+                  <Pause size={20} color="var(--muted-100)" />
+                ) : (
+                  <Play size={20} fill="var(--muted-100)" color="var(--muted-100)" style={{ marginLeft: 2 }} />
+                )}
               </button>
-              <button disabled title={shuffleDisabled ? "Shuffle (disabled)" : "Shuffle"} style={{
-                background: "none",
-                border: "none",
-                cursor: "not-allowed",
-                padding: 4,
-                opacity: 0.28,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}>
-                <Shuffle size={16} color={shuffleActive ? "var(--spotify-green)" : "var(--muted-500)"} />
-              </button>
-              <button disabled title={previousDisabled ? "Previous (disabled)" : "Previous"} style={{
-                background: "none",
-                border: "none",
-                cursor: "not-allowed",
-                padding: 4,
-                opacity: 0.28,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}>
-                <SkipBack size={20} color="var(--muted-500)" />
-              </button>
-            </div>
 
-            <button
-              disabled
-              title={playDisabled ? "Play (disabled)" : isPlaying ? "Pause" : "Play"}
-              style={{
-                background: "rgba(255,255,255,0.10)",
-                border: "none",
-                cursor: "not-allowed",
-                width: 44,
-                height: 44,
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                opacity: 0.35,
-                flexShrink: 0,
-              }}
-            >
-              {isPlaying ? (
-                <Pause size={20} color="var(--muted-100)" />
-              ) : (
-                <Play size={20} fill="var(--muted-100)" color="var(--muted-100)" style={{ marginLeft: 2 }} />
-              )}
-            </button>
-
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <button disabled title={nextDisabled ? "Next (disabled)" : "Next"} style={{
-                background: "none",
-                border: "none",
-                cursor: "not-allowed",
-                padding: 4,
-                opacity: 0.28,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}>
-                <SkipForward size={20} color="var(--muted-500)" />
-              </button>
-              <button disabled title={repeatDisabled ? "Repeat (disabled)" : "Repeat"} style={{
-                background: "none",
-                border: "none",
-                cursor: "not-allowed",
-                padding: 4,
-                opacity: 0.28,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}>
-                <Repeat size={16} color={repeatActive ? "var(--spotify-green)" : "var(--muted-500)"} />
-              </button>
-              <button
-                ref={queueBtnRef}
-                onClick={() => setQueueOpen((open) => !open)}
-                aria-controls={QUEUE_PANEL_ID}
-                aria-expanded={queueOpen}
-                aria-label={queueOpen ? "Close queue" : "Open queue"}
-                title="Queue"
-                style={{
+              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                <button disabled title={nextDisabled ? "Next (disabled)" : "Next"} style={{
                   background: "none",
                   border: "none",
-                  cursor: "pointer",
+                  cursor: "not-allowed",
                   padding: 4,
+                  opacity: 0.28,
                   display: "flex",
-                  flexDirection: "column",
                   alignItems: "center",
-                  gap: 3,
-                  transition: `transform 150ms ${EASING}`,
-                }}
-                onMouseEnter={(event) => (event.currentTarget.style.transform = "scale(1.1)")}
-                onMouseLeave={(event) => (event.currentTarget.style.transform = "scale(1)")}
-              >
-                <List
-                  size={20}
-                  color={queueOpen ? "var(--spotify-green)" : "var(--muted-500)"}
-                  style={{ transition: `color ${DURATION} ${EASING}` }}
-                />
-                <span
+                  justifyContent: "center",
+                }}>
+                  <SkipForward size={20} color="var(--muted-500)" />
+                </button>
+                <button disabled title={repeatDisabled ? "Repeat (disabled)" : "Repeat"} style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "not-allowed",
+                  padding: 4,
+                  opacity: 0.28,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}>
+                  <Repeat size={16} color={repeatActive ? "var(--spotify-green)" : "var(--muted-500)"} />
+                </button>
+                <button
+                  ref={queueBtnRef}
+                  onClick={() => setQueueOpen((open) => !open)}
+                  aria-controls={QUEUE_PANEL_ID}
+                  aria-expanded={queueOpen}
+                  aria-label={queueOpen ? "Close queue" : "Open queue"}
+                  title="Queue"
                   style={{
-                    display: "block",
-                    width: 4,
-                    height: 4,
-                    borderRadius: "50%",
-                    background: "var(--spotify-green)",
-                    opacity: queueOpen ? 1 : 0,
-                    transition: `opacity ${DURATION} ${EASING}`,
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: 4,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: 3,
+                    transition: `transform 150ms ${EASING}`,
+                  }}
+                  onMouseEnter={(event) => (event.currentTarget.style.transform = "scale(1.1)")}
+                  onMouseLeave={(event) => (event.currentTarget.style.transform = "scale(1)")}
+                >
+                  <List
+                    size={20}
+                    color={queueOpen ? "var(--spotify-green)" : "var(--muted-500)"}
+                    style={{ transition: `color ${DURATION} ${EASING}` }}
+                  />
+                  <span
+                    style={{
+                      display: "block",
+                      width: 4,
+                      height: 4,
+                      borderRadius: "50%",
+                      background: "var(--spotify-green)",
+                      opacity: queueOpen ? 1 : 0,
+                      transition: `opacity ${DURATION} ${EASING}`,
+                    }}
+                  />
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+              <span style={{ fontSize: 11, color: "var(--muted-400)", minWidth: 28, textAlign: "right" }}>
+                {formatTime(currentProgressMs)}
+              </span>
+              <div
+                role="progressbar"
+                aria-label="Playback position"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={playbackProgressPercent}
+                style={{
+                  flex: 1,
+                  position: "relative",
+                  height: 4,
+                  borderRadius: 99,
+                  background: "var(--muted-100)",
+                  cursor: "not-allowed",
+                }}
+              >
+                <div
+                  style={{
+                    height: "100%",
+                    width: `${playbackProgressPercent}%`,
+                    borderRadius: 99,
+                    background: "var(--muted-500)",
+                    transition: `width ${TRANSITION}`,
                   }}
                 />
-              </button>
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "50%",
+                    left: `calc(${playbackProgressPercent}% - 6px)`,
+                    transform: "translateY(-50%)",
+                    width: 12,
+                    height: 12,
+                    borderRadius: "50%",
+                    background: "var(--muted-100)",
+                    boxShadow: "0 1px 4px rgba(0,0,0,0.45)",
+                  }}
+                />
+              </div>
+              <span style={{ fontSize: 11, color: "var(--muted-400)", minWidth: 28 }}>
+                {formatTime(playbackDurationMs)}
+              </span>
             </div>
-          </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-            <span style={{ fontSize: 11, color: "var(--muted-400)", minWidth: 28, textAlign: "right" }}>
-              {formatTime(currentProgressMs)}
-            </span>
             <div
-              role="progressbar"
-              aria-label="Playback position"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={playbackProgressPercent}
               style={{
-                flex: 1,
-                position: "relative",
-                height: 4,
-                borderRadius: 99,
-                background: "var(--muted-100)",
-                cursor: "not-allowed",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 7,
+                padding: "8px 14px",
+                borderRadius: 20,
+                background: "rgba(255,255,255,0.06)",
+                width: "fit-content",
+                margin: "0 auto",
               }}
             >
-              <div
-                style={{
-                  height: "100%",
-                  width: `${playbackProgressPercent}%`,
-                  borderRadius: 99,
-                  background: "var(--muted-500)",
-                  transition: `width ${TRANSITION}`,
-                }}
-              />
-              <div
-                style={{
-                  position: "absolute",
-                  top: "50%",
-                  left: `calc(${playbackProgressPercent}% - 6px)`,
-                  transform: "translateY(-50%)",
-                  width: 12,
-                  height: 12,
-                  borderRadius: "50%",
-                  background: "var(--muted-100)",
-                  boxShadow: "0 1px 4px rgba(0,0,0,0.45)",
-                }}
-              />
+              <Smartphone size={13} color="var(--muted-500)" />
+              <span style={{ fontSize: 11, color: "var(--muted-500)", fontWeight: 600 }}>Listening on&nbsp;</span>
+              <span style={{ fontSize: 11, color: "var(--muted-100)", fontWeight: 700 }}>{deviceName}</span>
             </div>
-            <span style={{ fontSize: 11, color: "var(--muted-400)", minWidth: 28 }}>
-              {formatTime(playbackDurationMs)}
-            </span>
           </div>
-
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 7,
-              padding: "8px 14px",
-              borderRadius: 20,
-              background: "rgba(255,255,255,0.06)",
-              width: "fit-content",
-              margin: "0 auto",
-            }}
-          >
-            <Smartphone size={13} color="var(--muted-500)" />
-            <span style={{ fontSize: 11, color: "var(--muted-500)", fontWeight: 600 }}>Listening on&nbsp;</span>
-            <span style={{ fontSize: 11, color: "var(--muted-100)", fontWeight: 700 }}>{deviceName}</span>
-          </div>
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }
