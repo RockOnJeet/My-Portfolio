@@ -430,6 +430,7 @@ export default function Spotify() {
   const [trackImageDataUrl, setTrackImageDataUrl] = useState<string | null>(null);
   const artworkCacheRef = useRef<Map<string, string | null>>(new Map());
   const artworkPendingRef = useRef<Set<string>>(new Set());
+  const artworkInFlightRef = useRef<Map<string, Promise<string | null>>>(new Map());
 
   const { toast } = useToast();
   const spotifyErrorToastId = useRef<string | null>(null);
@@ -505,6 +506,48 @@ export default function Spotify() {
     () => [albumImageUrl, ...queueImageUrls].join("|"),
     [albumImageUrl, queueImageUrls]
   );
+
+  const fetchArtworkDataUrl = async (url: string): Promise<string | null> => {
+    const cached = artworkCacheRef.current.get(url);
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    const inFlight = artworkInFlightRef.current.get(url);
+    if (inFlight) {
+      return inFlight;
+    }
+
+    const request = (async () => {
+      try {
+        const response = await fetch(`/api/spotify/artwork?url=${encodeURIComponent(url)}`);
+        if (!response.ok) {
+          artworkCacheRef.current.set(url, null);
+          return null;
+        }
+
+        const json = await response.json();
+        if (json && json.success === true && typeof json.dataUrl === "string") {
+          artworkCacheRef.current.set(url, json.dataUrl);
+          return json.dataUrl;
+        }
+
+        artworkCacheRef.current.set(url, null);
+        return null;
+      } catch {
+        artworkCacheRef.current.set(url, null);
+        return null;
+      }
+    })();
+
+    artworkInFlightRef.current.set(url, request);
+
+    try {
+      return await request;
+    } finally {
+      artworkInFlightRef.current.delete(url);
+    }
+  };
 
   const albumName = getSpotifyAlbumName(displayPlaybackTrack);
   const playlistName = getSpotifyContextName(playbackData);
@@ -624,57 +667,25 @@ export default function Spotify() {
 
     let canceled = false;
 
-    async function fetchArtwork(url: string) {
-      const cached = artworkCacheRef.current.get(url);
-      if (cached !== undefined) {
-        if (url === albumImageUrl) {
-          setTrackImageDataUrl(cached);
-        }
-        return;
-      }
+    async function hydrateArtworkCache() {
+      const resolved = await Promise.all(
+        urlsToFetch.map(async (url) => {
+          const dataUrl = await fetchArtworkDataUrl(url);
+          return { url, dataUrl };
+        })
+      );
 
-      if (artworkPendingRef.current.has(url)) {
-        return;
-      }
+      if (canceled) return;
 
-      artworkPendingRef.current.add(url);
-
-      try {
-        const response = await fetch(`/api/spotify/artwork?url=${encodeURIComponent(url)}`);
-        if (!response.ok) {
-          artworkCacheRef.current.set(url, null);
-          if (url === albumImageUrl) {
-            setTrackImageDataUrl(null);
-          }
-          return;
-        }
-
-        const json = await response.json();
-        if (canceled) return;
-
-        if (json && json.success === true && typeof json.dataUrl === "string") {
-          artworkCacheRef.current.set(url, json.dataUrl);
-          if (url === albumImageUrl) {
-            setTrackImageDataUrl(json.dataUrl);
-          }
-        } else {
-          artworkCacheRef.current.set(url, null);
-          if (url === albumImageUrl) {
-            setTrackImageDataUrl(null);
-          }
-        }
-      } catch {
-        if (canceled) return;
-        artworkCacheRef.current.set(url, null);
-        if (url === albumImageUrl) {
-          setTrackImageDataUrl(null);
-        }
-      } finally {
-        artworkPendingRef.current.delete(url);
+      const resolvedPrimary = resolved.find((entry) => entry.url === albumImageUrl);
+      if (resolvedPrimary) {
+        setTrackImageDataUrl(resolvedPrimary.dataUrl);
+      } else {
+        setTrackImageDataUrl(null);
       }
     }
 
-    void Promise.all(urlsToFetch.map((url) => fetchArtwork(url)));
+    void hydrateArtworkCache();
 
     return () => {
       canceled = true;
