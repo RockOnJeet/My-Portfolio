@@ -502,11 +502,6 @@ export default function Spotify() {
     [queueItems]
   );
 
-  const artworkKey = useMemo(
-    () => [albumImageUrl, ...queueImageUrls].join("|"),
-    [albumImageUrl, queueImageUrls]
-  );
-
   const fetchArtworkDataUrl = async (url: string): Promise<string | null> => {
     const cached = artworkCacheRef.current.get(url);
     if (cached !== undefined) {
@@ -656,12 +651,35 @@ export default function Spotify() {
   }, []);
 
   useEffect(() => {
-    const urlsToFetch = Array.from(
-      new Set([...(albumImageUrl ? [albumImageUrl] : []), ...queueImageUrls])
-    );
-
-    if (!urlsToFetch.length) {
+    if (!albumImageUrl) {
       setTrackImageDataUrl(null);
+      return undefined;
+    }
+
+    const heroImageUrl: string = albumImageUrl;
+
+    const version = artworkVersionRef.current + 1;
+    artworkVersionRef.current = version;
+
+    let canceled = false;
+
+    async function hydrateHeroArtworkCache() {
+      const primaryDataUrl = await fetchArtworkDataUrl(heroImageUrl);
+
+      if (canceled || artworkVersionRef.current !== version) return;
+
+      setTrackImageDataUrl(primaryDataUrl);
+    }
+
+    void hydrateHeroArtworkCache();
+
+    return () => {
+      canceled = true;
+    };
+  }, [albumImageUrl]);
+
+  useEffect(() => {
+    if (!queueOpen || queueImageUrls.length === 0) {
       return undefined;
     }
 
@@ -670,30 +688,24 @@ export default function Spotify() {
 
     let canceled = false;
 
-    async function hydrateArtworkCache() {
-      const resolved = await Promise.all(
-        urlsToFetch.map(async (url) => {
-          const dataUrl = await fetchArtworkDataUrl(url);
-          return { url, dataUrl };
+    async function hydrateQueueArtworkCache() {
+      await Promise.all(
+        queueImageUrls.map(async (url) => {
+          await fetchArtworkDataUrl(url);
         })
       );
 
       if (canceled || artworkVersionRef.current !== version) return;
 
-      const resolvedPrimary = resolved.find((entry) => entry.url === albumImageUrl);
-      if (resolvedPrimary) {
-        setTrackImageDataUrl(resolvedPrimary.dataUrl);
-      } else {
-        setTrackImageDataUrl(null);
-      }
+      setRenderTick((tick) => tick + 1);
     }
 
-    void hydrateArtworkCache();
+    void hydrateQueueArtworkCache();
 
     return () => {
       canceled = true;
     };
-  }, [artworkKey]);
+  }, [queueOpen, queueImageUrls]);
 
   useEffect(() => {
     if (!spotifyError || spotifyErrorToastId.current) return;
