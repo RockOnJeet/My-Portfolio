@@ -6,14 +6,14 @@
 
   /* Interface */
   --color-background: #1b1e25;
-  --color-surface: #101116;
-  --color-surface-raised: #292c35;
-  --color-text: #fcfcfc;
+  --color-surface: #101116; /* Surface for cards, modals, etc. */
+  --color-surface-raised: #292c35; /* Surface for buttons, inputs, etc. */
+  --color-text: #cfcfcf;
   --color-text-muted: #bfc2cc;
   --color-border: #343744;
   --color-accent: #7981ed;
   --color-accent-hover: #a4aaff;
-  --color-focus-ring: #d6d3ff;
+  --color-focus-ring: #d6d3ff; /* Focus color for keyboard and accessibility */
 
   /* Decorative Light Rays effect */
   --color-glow-start: #394796;
@@ -27,15 +27,16 @@
     color-scheme: light;
 
     --color-background: #f5f6fa;
-    --color-surface: #ffffff;
-    --color-surface-raised: #eceef5;
+    --color-surface: #ffffff; /* Surface for cards, modals, etc. */
+    --color-surface-raised: #eceef5; /* Surface for buttons, inputs, etc. */
     --color-text: #1b1e25;
     --color-text-muted: #555b6b;
     --color-border: #d8dbe6;
     --color-accent: #394796;
     --color-accent-hover: #303c8a;
-    --color-focus-ring: #394796;
+    --color-focus-ring: #394796; /* Focus color for keyboard and accessibility */
 
+    /* Decorative Light Rays effect */
     --color-glow-start: #7981ed;
     --color-glow-end: #8d79f4;
     --color-glow-core: #ffffff;

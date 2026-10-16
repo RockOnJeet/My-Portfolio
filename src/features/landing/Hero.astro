@@ -1,0 +1,43 @@
+---
+import "./hero.css";
+import { defaultHeadline, headlineVariants } from "./data/headlines";
+---
+
+<section class="hero" aria-labelledby="hero-heading">
+  <div class="hero__heading-group">
+    <!-- Holds heading and sticker -->
+    <h1 id="hero-heading">
+      {
+        defaultHeadline.segments.map((segment) => (
+          <span
+            style={
+              segment.emphasis === "accent"
+                ? "color: var(--color-accent)"
+                : segment.emphasis === "muted"
+                  ? "color: var(--color-text-muted)"
+                  : undefined // Inherit from parent
+            }
+          >
+            {segment.text}
+          </span>
+        ))
+      }
+    </h1>
+    <div class="hero__sticker-position">
+      <div
+        class="hero__rarity-sticker"
+        data-rarity={defaultHeadline.rarity}
+        aria-label={`Rarity: ${defaultHeadline.rarity}`}
+      >
+        <span class="hero__rarity-sticker__star" aria-hidden="true"></span>
+        <span class="hero__rarity-sticker__progress" aria-live="polite"
+          >0/{1 + headlineVariants.length}</span
+        >
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  import "./hero";
+</script>

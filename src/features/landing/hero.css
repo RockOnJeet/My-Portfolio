@@ -1,0 +1,145 @@
+.hero {
+  /* Rarity colors */
+  --color-rarity-normal: oklch(0.5 0.25 200);
+  --color-rarity-epic: oklch(0.35 0.25 300);
+  --color-rarity-legendary: oklch(0.55 0.2 96);
+  --color-rarity-mythic: oklch(0.6 0.2 25);
+  --color-sticker-star: var(--color-glow-core);
+
+  display: grid;
+  min-height: 100svh;
+  place-items: center;
+  padding: clamp(1.5rem, 5vw, 5rem);
+  /* A restrained vector grid fades into the page background toward the bottom. */
+  background-color: var(--color-background);
+  background-image:
+    linear-gradient(
+      to bottom,
+      transparent 0%,
+      transparent 45%,
+      var(--color-background) 100%
+    ),
+    url("./content/cutting-mat-grid.svg");
+  background-position: center top, left top;
+  background-size: auto, 160px 160px;
+  background-repeat: no-repeat, repeat;
+  background-blend-mode: normal, screen;
+}
+
+.hero__heading-group {
+  position: relative;
+  width: min(100%, 72rem);
+  max-width: 100%;
+  padding: clamp(1.75rem, 3.75vw, 3rem);
+  border: 1.5px solid rgb(from var(--color-border) r g b / 45%);
+  border-radius: 0.3em;
+  background: rgb(from var(--color-surface) r g b / 45%);
+  box-shadow:
+    0 0.75rem 2rem rgb(0 0 0 / 16%),
+    inset 0 1px 0 rgb(255 255 255 / 8%);
+  -webkit-backdrop-filter: blur(0.15rem) saturate(160%);
+  backdrop-filter: blur(0.15rem) saturate(160%);
+}
+
+.hero__sticker-position {
+  position: absolute; /* Position the sticker relative to the heading group without affecting the layout */
+  top: -1em;
+  right: -1em;
+}
+
+.hero__rarity-sticker {
+  position: relative;
+  display: grid;
+  grid-template-rows: 1fr auto; /* Let star take available space and progress take its content height */
+  justify-items: center;
+  gap: 0.15rem;
+  padding: 0.45rem 0.35rem 0.25rem;
+  border-radius: 0.28em;
+  overflow: hidden;
+  clip-path: polygon(0 72%, 28% 100%, 100% 100%, 100% 0, 0 0);
+  background: var(--color-rarity-normal);
+  box-shadow: 0 0.12em 0.16em rgb(0 0 0 / 22%);
+  transform: rotate(15deg);
+  user-select: none;
+  pointer-events: none; /* Prevent interaction with the sticker */
+}
+
+.hero__rarity-sticker__star {
+  display: block;
+  width: clamp(1.25rem, 2.5vw, 2rem);
+  aspect-ratio: 1;
+  background: var(--color-sticker-star);
+  clip-path: polygon(
+    50% 0%,
+    61% 35%,
+    98% 35%,
+    68% 57%,
+    79% 91%,
+    50% 70%,
+    21% 91%,
+    32% 57%,
+    2% 35%,
+    39% 35%
+  );
+}
+
+.hero__rarity-sticker__progress {
+  position: relative;
+  justify-self: end; /* override center alignment */
+  padding-left: 0.65rem;
+  font-size: clamp(0.55rem, 1.2vw, 0.75rem);
+  font-weight: 700;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums; /* Ensure numbers align properly */
+  white-space: nowrap; /* Single line content */
+}
+
+/* Sticker fold setup */
+.hero__rarity-sticker::after {
+  content: "";
+  position: absolute; /* Position the fold relative to the sticker without affecting the layout */
+  left: 0;
+  bottom: 0;
+  z-index: 3; /* Ensure the fold is above the sticker content */
+  width: 28%;
+  height: 28%;
+  background: rgb(255 255 255 / 34%);
+  clip-path: polygon(0 0, 100% 100%, 100% 0);
+  pointer-events: none;
+  border-radius: 0 0.2em;
+}
+
+.hero__rarity-sticker[data-rarity="normal"] {
+  background: var(--color-rarity-normal);
+}
+
+.hero__rarity-sticker[data-rarity="epic"] {
+  background: var(--color-rarity-epic);
+  box-shadow: 0 0 0.3em var(--color-rarity-epic);
+}
+
+.hero__rarity-sticker[data-rarity="legendary"] {
+  background: var(--color-rarity-legendary);
+  box-shadow: 0 0 0.3em var(--color-rarity-legendary);
+}
+
+.hero__rarity-sticker[data-rarity="mythic"] {
+  background: var(--color-rarity-mythic);
+  box-shadow: 0 0 0.3em var(--color-rarity-mythic);
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(3rem, 9vw, 7rem);
+  font-weight: 750;
+  letter-spacing: -0.055em;
+  line-height: 1.05;
+  text-wrap: balance;
+}
+
+@supports (not (backdrop-filter: blur(1px))) and
+  (not (-webkit-backdrop-filter: blur(1px))) {
+  .hero__heading-group {
+    background: var(--color-surface);
+  }
+}
