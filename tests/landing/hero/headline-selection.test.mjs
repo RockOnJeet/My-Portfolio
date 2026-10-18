@@ -7,8 +7,8 @@ import {
   headlineVariants,
   rarityTiers,
   selectHeadline,
-} from "../src/features/landing/data/headlines.ts";
-import { generateHeadlineId } from "../scripts/generate-headline-ids.mjs";
+} from "../../../src/features/landing/hero/data/headlines.ts";
+import { generateHeadlineId } from "../../../scripts/generate-headline-ids.mjs";
 
 function sequenceRandom(...values) {
   let index = 0;
@@ -196,7 +196,7 @@ test("data integrity: generated headline IDs are unique across the dataset", () 
 });
 
 test("data integrity: duplicate canonical content is rejected", async () => {
-  const { assertUniqueHeadlineIds } = await import("../src/features/landing/data/headlines.ts");
+  const { assertUniqueHeadlineIds } = await import("../../../src/features/landing/hero/data/headlines.ts");
   const duplicateId = generateHeadlineId([{ text: "Same text" }]);
   const duplicateHeadlines = [
     { id: duplicateId, segments: [{ text: "Same text", emphasis: "muted" }], rarity: "normal" },

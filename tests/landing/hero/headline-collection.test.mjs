@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { defaultHeadline, headlineVariants } from "../src/features/landing/data/headlines.ts";
+import { defaultHeadline, headlineVariants } from "../../../src/features/landing/hero/data/headlines.ts";
 import {
   loadDiscoveredHeadlineIds,
   recordDiscoveredHeadlines,
-} from "../src/features/landing/data/headline-collection.ts";
+} from "../../../src/features/landing/hero/data/headline-collection.ts";
 
 const STORAGE_KEY = "portfolio:headline-collection";
 const firstId = defaultHeadline.id;

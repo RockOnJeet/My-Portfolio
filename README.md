@@ -8,20 +8,40 @@ npm create astro@latest -- --template minimal
 
 ## 🚀 Project Structure
 
-Inside of your Astro project, you'll see the following folders and files:
+The project is organized by route and isolated page-level features:
 
 ```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
+src/
+├── pages/
+│   └── index.astro
+├── features/
+│   ├── shared/                         # Reused across experiences
+│   ├── landing/
+│   │   ├── hero/                       # Hero markup, styles, script, and headline data/content
+│   │   │   ├── Hero.astro
+│   │   │   ├── hero.css
+│   │   │   ├── hero.ts
+│   │   │   ├── data/
+│   │   │   └── content/
+│   │   ├── cellular-automata-background/ # Background markup, styles, and script
+│   │   │   ├── CellularAutomataBackground.astro
+│   │   │   ├── cellular-automata-background.css
+│   │   │   └── cellular-automata-background.ts
+│   │   └── legacy/                      # Retained assets not currently used
+│   ├── tardis/
+│   └── spotify/
+├── global.css                           # Site-wide styles and semantic tokens
+└── layouts/
+
+public/
+scripts/                                 # Project scripts, including headline ID generation
+tests/                                   # Automated tests
+package.json
 ```
 
 Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
+This project organizes UI components by feature under `src/features/`. Shared components belong in `src/features/shared/`, while page-specific components belong in their respective feature directories.
 
 Any static assets, like images, can be placed in the `public/` directory.
 

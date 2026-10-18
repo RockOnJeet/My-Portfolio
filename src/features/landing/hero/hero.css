@@ -6,24 +6,13 @@
   --color-rarity-mythic: oklch(0.6 0.2 25);
   --color-sticker-star: var(--color-glow-core);
 
+  position: relative;
+  z-index: 1;
   display: grid;
   min-height: 100svh;
   place-items: center;
   padding: clamp(1.5rem, 5vw, 5rem);
-  /* A restrained vector grid fades into the page background toward the bottom. */
-  background-color: var(--color-background);
-  background-image:
-    linear-gradient(
-      to bottom,
-      transparent 0%,
-      transparent 45%,
-      var(--color-background) 100%
-    ),
-    url("./content/cutting-mat-grid.svg");
-  background-position: center top, left top;
-  background-size: auto, 160px 160px;
-  background-repeat: no-repeat, repeat;
-  background-blend-mode: normal, screen;
+  background: transparent;
 }
 
 .hero__heading-group {
@@ -31,14 +20,14 @@
   width: min(100%, 72rem);
   max-width: 100%;
   padding: clamp(1.75rem, 3.75vw, 3rem);
-  border: 1.5px solid rgb(from var(--color-border) r g b / 45%);
+  border: 1.25px solid rgb(from var(--color-border) r g b / 25%);
   border-radius: 0.3em;
-  background: rgb(from var(--color-surface) r g b / 45%);
+  background: rgb(from var(--color-surface) r g b / 35%);
   box-shadow:
     0 0.75rem 2rem rgb(0 0 0 / 16%),
     inset 0 1px 0 rgb(255 255 255 / 8%);
-  -webkit-backdrop-filter: blur(0.15rem) saturate(160%);
-  backdrop-filter: blur(0.15rem) saturate(160%);
+  -webkit-backdrop-filter: blur(0.2rem) saturate(180%);
+  backdrop-filter: blur(0.2rem) saturate(180%);
 }
 
 .hero__sticker-position {
